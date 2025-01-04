@@ -15,6 +15,7 @@ func (app *application) routes() http.Handler {
     // http.MethodPost are constants which equate to the strings "GET" and "POST" 
     // respectively.
     router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
+    router.HandlerFunc(http.MethodGet, "/v1/services/:id/metrics/ping", app.pingMetricHandler)
 
     // Return the httprouter instance.
     return router
