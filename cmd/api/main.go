@@ -17,7 +17,8 @@ const version = "1.0.0"
 type ObaServer struct {
 	Name               string
 	ID                 int
-	URL                string
+	ObaBaseURL         string
+	ObaApiKey          string
 	GtfsUrl            string
 	TripUpdateUrl      string
 	VehiclePositionUrl string
@@ -53,7 +54,8 @@ func main() {
 	cfg.servers[1] = ObaServer{
 		Name:               "Sound Transit",
 		ID:                 1,
-		URL:                "https://api.pugetsound.onebusaway.org",
+		ObaBaseURL:         "https://api.pugetsound.onebusaway.org",
+		ObaApiKey:          "org.onebusaway.iphone",
 		GtfsUrl:            "https://www.soundtransit.org/GTFS-rail/40_gtfs.zip",
 		TripUpdateUrl:      "https://api.pugetsound.onebusaway.org/api/gtfs_realtime/trip-updates-for-agency/40.pb?key=org.onebusaway.iphone",
 		VehiclePositionUrl: "https://api.pugetsound.onebusaway.org/api/gtfs_realtime/vehicle-positions-for-agency/40.pb?key=org.onebusaway.iphone",

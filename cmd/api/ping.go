@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
+	onebusaway "github.com/OneBusAway/go-sdk"
+	"github.com/OneBusAway/go-sdk/option"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -25,6 +29,18 @@ func (app *application) pingMetricHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Otherwise, interpolate the service ID in a placeholder response.
-	fmt.Fprintf(w, "show the details of server %s (ID %d)\n", server.Name, server.ID)
+	client := onebusaway.NewClient(
+		option.WithAPIKey(server.ObaApiKey),
+		option.WithBaseURL(server.ObaBaseURL),
+	)
+
+	ctx := context.Background()
+
+	currentTime, err := client.CurrentTime.Get(ctx)
+
+	if err != nil {
+		log.Fatalf("Error fetching current time: %v", err)
+	}
+
+	fmt.Fprintln(w, currentTime.Data.JSON.RawJSON())
 }
