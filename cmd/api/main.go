@@ -32,7 +32,7 @@ type ObaServer struct {
 type config struct {
 	port    int
 	env     string
-	servers map[int]ObaServer
+	servers []ObaServer
 }
 
 // Define an application struct to hold the dependencies for our HTTP handlers, helpers,
@@ -50,8 +50,7 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.Parse()
 
-	cfg.servers = make(map[int]ObaServer)
-	cfg.servers[1] = ObaServer{
+	server := ObaServer{
 		Name:               "Sound Transit",
 		ID:                 1,
 		ObaBaseURL:         "https://api.pugetsound.onebusaway.org",
@@ -61,12 +60,16 @@ func main() {
 		VehiclePositionUrl: "https://api.pugetsound.onebusaway.org/api/gtfs_realtime/vehicle-positions-for-agency/40.pb?key=org.onebusaway.iphone",
 	}
 
+	cfg.servers = []ObaServer{server}
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	app := &application{
 		config: cfg,
 		logger: logger,
 	}
+
+	app.startMetricsCollection()
 
 	// Use the httprouter instance returned by app.routes() as the server handler.
 	srv := &http.Server{
