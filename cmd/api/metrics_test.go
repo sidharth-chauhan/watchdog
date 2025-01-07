@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"watchdog.onebusaway.org/internal/metrics"
 	"watchdog.onebusaway.org/internal/models"
 )
 
@@ -15,7 +16,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	app := newTestApplication(t)
 
 	// Register the metric without starting the collection routine
-	obaApiStatus.WithLabelValues(
+	metrics.ObaApiStatus.WithLabelValues(
 		"1",
 		"https://test.example.com",
 	).Set(1)
@@ -59,8 +60,6 @@ func TestCheckServer(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	app := newTestApplication(t)
-
 	testServer := models.ObaServer{
 		Name:       "Test Server",
 		ID:         999,
@@ -69,7 +68,7 @@ func TestCheckServer(t *testing.T) {
 	}
 
 	// Test the checkServer function
-	app.checkServer(testServer)
+	metrics.ServerPing(testServer)
 
 	// Wait a brief moment for metrics to be updated
 	time.Sleep(100 * time.Millisecond)
@@ -77,7 +76,7 @@ func TestCheckServer(t *testing.T) {
 	// Get and log all labels that are currently set for this metric
 	metricChan := make(chan float64)
 	go func() {
-		metric, err := getMetricValue(obaApiStatus, map[string]string{
+		metric, err := getMetricValue(metrics.ObaApiStatus, map[string]string{
 			"server_id":  "999",
 			"server_url": testServer.ObaBaseURL,
 		})
