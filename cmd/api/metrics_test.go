@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"watchdog.onebusaway.org/internal/models"
 )
 
 func TestMetricsEndpoint(t *testing.T) {
@@ -60,7 +61,7 @@ func TestCheckServer(t *testing.T) {
 
 	app := newTestApplication(t)
 
-	testServer := ObaServer{
+	testServer := models.ObaServer{
 		Name:       "Test Server",
 		ID:         999,
 		ObaBaseURL: ts.URL,

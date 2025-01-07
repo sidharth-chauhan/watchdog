@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"strconv"
 	"time"
+
+	"watchdog.onebusaway.org/internal/models"
 )
 
 var (
@@ -35,7 +37,7 @@ func (app *application) startMetricsCollection() {
 	}()
 }
 
-func (app *application) checkServer(server ObaServer) {
+func (app *application) checkServer(server models.ObaServer) {
 	client := onebusaway.NewClient(
 		option.WithAPIKey(server.ObaApiKey),
 		option.WithBaseURL(server.ObaBaseURL),

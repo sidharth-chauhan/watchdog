@@ -7,22 +7,13 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"watchdog.onebusaway.org/internal/models"
 )
 
 // Declare a string containing the application version number. Later in the book we'll
 // generate this automatically at build time, but for now we'll just store the version
 // number as a hard-coded global constant.
 const version = "1.0.0"
-
-type ObaServer struct {
-	Name               string
-	ID                 int
-	ObaBaseURL         string
-	ObaApiKey          string
-	GtfsUrl            string
-	TripUpdateUrl      string
-	VehiclePositionUrl string
-}
 
 // Define a config struct to hold all the configuration settings for our application.
 // For now, the only configuration settings will be the network port that we want the
@@ -32,7 +23,7 @@ type ObaServer struct {
 type config struct {
 	port    int
 	env     string
-	servers []ObaServer
+	servers []models.ObaServer
 }
 
 // Define an application struct to hold the dependencies for our HTTP handlers, helpers,
@@ -50,17 +41,17 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.Parse()
 
-	server := ObaServer{
-		Name:               "Sound Transit",
-		ID:                 1,
-		ObaBaseURL:         "https://api.pugetsound.onebusaway.org",
-		ObaApiKey:          "org.onebusaway.iphone",
-		GtfsUrl:            "https://www.soundtransit.org/GTFS-rail/40_gtfs.zip",
-		TripUpdateUrl:      "https://api.pugetsound.onebusaway.org/api/gtfs_realtime/trip-updates-for-agency/40.pb?key=org.onebusaway.iphone",
-		VehiclePositionUrl: "https://api.pugetsound.onebusaway.org/api/gtfs_realtime/vehicle-positions-for-agency/40.pb?key=org.onebusaway.iphone",
-	}
+	server := models.NewObaServer(
+		"Sound Transit",
+		1,
+		"https://api.pugetsound.onebusaway.org",
+		"org.onebusaway.iphone",
+		"https://www.soundtransit.org/GTFS-rail/40_gtfs.zip",
+		"https://api.pugetsound.onebusaway.org/api/gtfs_realtime/trip-updates-for-agency/40.pb?key=org.onebusaway.iphone",
+		"https://api.pugetsound.onebusaway.org/api/gtfs_realtime/vehicle-positions-for-agency/40.pb?key=org.onebusaway.iphone",
+	)
 
-	cfg.servers = []ObaServer{server}
+	cfg.servers = []models.ObaServer{*server}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 

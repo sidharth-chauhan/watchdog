@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+
+	"watchdog.onebusaway.org/internal/models"
 )
 
 // getMetricValue is a helper function that retrieves the current value of a specific metric
@@ -34,17 +36,20 @@ func getMetricValue(metric *prometheus.GaugeVec, labels map[string]string) (floa
 func newTestApplication(t *testing.T) *application {
 	t.Helper()
 
+	server := models.NewObaServer(
+		"Test Server",
+		1,
+		"https://test.example.com",
+		"test-key",
+		"",
+		"",
+		"",
+	)
+
 	cfg := config{
-		port: 4000,
-		env:  "testing",
-		servers: []ObaServer{
-			{
-				Name:       "Test Server",
-				ID:         1,
-				ObaBaseURL: "https://test.example.com",
-				ObaApiKey:  "test-key",
-			},
-		},
+		port:    4000,
+		env:     "testing",
+		servers: []models.ObaServer{*server},
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
