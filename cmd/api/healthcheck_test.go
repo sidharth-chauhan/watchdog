@@ -6,13 +6,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"watchdog.onebusaway.org/internal/server"
 )
 
 func TestHealthcheckHandler(t *testing.T) {
 	// Create a new instance of our application struct which uses the mock env
 	app := &application{
-		config: config{
-			env: "testing",
+		config: server.Config{
+			Env: "testing",
 		},
 	}
 

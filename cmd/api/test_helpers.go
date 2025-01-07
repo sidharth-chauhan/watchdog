@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"watchdog.onebusaway.org/internal/server"
 
 	"watchdog.onebusaway.org/internal/models"
 )
@@ -36,7 +37,7 @@ func getMetricValue(metric *prometheus.GaugeVec, labels map[string]string) (floa
 func newTestApplication(t *testing.T) *application {
 	t.Helper()
 
-	server := models.NewObaServer(
+	obaServer := models.NewObaServer(
 		"Test Server",
 		1,
 		"https://test.example.com",
@@ -46,16 +47,16 @@ func newTestApplication(t *testing.T) *application {
 		"",
 	)
 
-	cfg := config{
-		port:    4000,
-		env:     "testing",
-		servers: []models.ObaServer{*server},
-	}
+	cfg := server.NewConfig(
+		4000,
+		"testing",
+		[]models.ObaServer{*obaServer},
+	)
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	return &application{
-		config: cfg,
+		config: *cfg,
 		logger: logger,
 	}
 }

@@ -29,7 +29,7 @@ func (app *application) startMetricsCollection() {
 		for {
 			select {
 			case <-ticker.C:
-				for _, server := range app.config.servers {
+				for _, server := range app.config.Servers {
 					app.checkServer(server)
 				}
 			}
