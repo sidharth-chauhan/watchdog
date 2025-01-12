@@ -87,6 +87,8 @@ func TestCheckServer(t *testing.T) {
 		if err != nil {
 			t.Errorf("Failed to get metric value: %v", err)
 		}
+		//t.Logf("Got metric value: %v with labels server_id=999, server_url=%s",
+		//	metric, testServer.ObaBaseURL)
 		metricChan <- metric
 	}()
 
