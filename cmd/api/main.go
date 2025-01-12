@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"time"
+
 	"watchdog.onebusaway.org/internal/models"
 	"watchdog.onebusaway.org/internal/server"
+	"watchdog.onebusaway.org/internal/utils"
 )
 
 // Declare a string containing the application version number. Later in the book we'll
@@ -52,6 +54,29 @@ func main() {
 
 	app.startMetricsCollection()
 
+	// Download the GTFS bundle on startup
+	cachePath := "cache/gtfs.zip"
+	bundleURL := "https://www.soundtransit.org/GTFS-rail/40_gtfs.zip"
+	err := utils.DownloadGTFSBundle(bundleURL, cachePath)
+	if err != nil {
+		logger.Error("Failed to download GTFS bundle", "error", err)
+	} else {
+		logger.Info("Successfully downloaded GTFS bundle", "path", cachePath)
+	}
+
+	// Cron job to download the GTFS bundle every 24 hours
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			err := utils.DownloadGTFSBundle(bundleURL, cachePath)
+			if err != nil {
+				logger.Error("Failed to download GTFS bundle", "error", err)
+			} else {
+				logger.Info("Successfully updated GTFS bundle", "path", cachePath)
+			}
+		}
+	}()
+
 	// Use the httprouter instance returned by app.routes() as the server handler.
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -63,7 +88,7 @@ func main() {
 	}
 
 	logger.Info("starting server", "addr", srv.Addr, "env", cfg.Env)
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	logger.Error(err.Error())
 	os.Exit(1)
 }
