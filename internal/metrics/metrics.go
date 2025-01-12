@@ -15,3 +15,15 @@ var (
 		[]string{"server_id", "server_url"},
 	)
 )
+
+var (
+	BundleEarliestExpirationGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "gtfs_bundle_days_until_earliest_expiration",
+		Help: "Number of days until the earliest GTFS bundle expiration",
+	}, []string{"agency_id"})
+
+	BundleLatestExpirationGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "gtfs_bundle_days_until_latest_expiration",
+		Help: "Number of days until the latest GTFS bundle expiration",
+	}, []string{"agency_id"})
+)
