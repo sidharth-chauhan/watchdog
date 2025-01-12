@@ -2,11 +2,15 @@ package main
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
 	"watchdog.onebusaway.org/internal/metrics"
 	"watchdog.onebusaway.org/internal/models"
 )
@@ -83,8 +87,6 @@ func TestCheckServer(t *testing.T) {
 		if err != nil {
 			t.Errorf("Failed to get metric value: %v", err)
 		}
-		//t.Logf("Got metric value: %v with labels server_id=999, server_url=%s",
-		//	metric, testServer.ObaBaseURL)
 		metricChan <- metric
 	}()
 
@@ -95,5 +97,48 @@ func TestCheckServer(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Error("Timeout waiting for metric value")
+	}
+}
+
+func TestCheckBundleExpiration(t *testing.T) {
+
+    fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
+
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	earliest, latest, err := metrics.CheckBundleExpiration(fixturePath, logger)
+	if err != nil {
+		t.Fatalf("CheckBundleExpiration failed: %v", err)
+	}
+
+	// This is the current gtfs.zip file in the testdata directory expected earliest and latest expiration days
+	expectedEarliest := int(time.Date(2024, 11, 22, 0, 0, 0, 0, time.UTC).Sub(time.Now()).Hours() / 24)
+	expectedLatest := int(time.Date(2025, 3, 28, 0, 0, 0, 0, time.UTC).Sub(time.Now()).Hours() / 24)
+
+	if earliest != expectedEarliest {
+		t.Errorf("Expected earliest expiration days to be %d, got %d", expectedEarliest, earliest)
+	}
+	if latest != expectedLatest {
+		t.Errorf("Expected latest expiration days to be %d, got %d", expectedLatest, latest)
+	}
+
+	earliestMetric, err := getMetricValue(metrics.BundleEarliestExpirationGauge, map[string]string{
+		"agency_id": "BundleExpiration",
+	})
+	if err != nil {
+		t.Errorf("Failed to get earliest expiration metric value: %v", err)
+	}
+	if earliestMetric != float64(expectedEarliest) {
+		t.Errorf("Expected earliest expiration metric to be %v, got %v", expectedEarliest, earliestMetric)
+	}
+
+	latestMetric, err := getMetricValue(metrics.BundleLatestExpirationGauge, map[string]string{
+		"agency_id": "BundleExpiration",
+	})
+	if err != nil {
+		t.Errorf("Failed to get latest expiration metric value: %v", err)
+	}
+	if latestMetric != float64(expectedLatest) {
+		t.Errorf("Expected latest expiration metric to be %v, got %v", expectedLatest, latestMetric)
 	}
 }
