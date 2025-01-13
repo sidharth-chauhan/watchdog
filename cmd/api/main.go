@@ -1,11 +1,14 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"watchdog.onebusaway.org/internal/models"
@@ -31,14 +34,23 @@ func main() {
 
 	flag.IntVar(&cfg.Port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.Env, "env", "development", "Environment (development|staging|production)")
+
+	bundleUrl := flag.String("url", "", "URL of the GTFS bundle")
 	flag.Parse()
+
+	if *bundleUrl == "" {
+		fmt.Println("Error: URL is required. Use the -url flag to specify the GTFS bundle URL.")
+
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	server := models.NewObaServer(
 		"Sound Transit",
 		1,
 		"https://api.pugetsound.onebusaway.org",
 		"org.onebusaway.iphone",
-		"https://www.soundtransit.org/GTFS-rail/40_gtfs.zip",
+		*bundleUrl,
 		"https://api.pugetsound.onebusaway.org/api/gtfs_realtime/trip-updates-for-agency/40.pb?key=org.onebusaway.iphone",
 		"https://api.pugetsound.onebusaway.org/api/gtfs_realtime/vehicle-positions-for-agency/40.pb?key=org.onebusaway.iphone",
 	)
@@ -46,6 +58,12 @@ func main() {
 	cfg.Servers = []models.ObaServer{*server}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	hash := sha1.Sum([]byte(*bundleUrl))
+	hashStr := hex.EncodeToString(hash[:])
+
+	cacheDir := "cache"
+	cachePath := filepath.Join(cacheDir, hashStr+".zip")
 
 	app := &application{
 		config: cfg,
@@ -55,9 +73,7 @@ func main() {
 	app.startMetricsCollection()
 
 	// Download the GTFS bundle on startup
-	cachePath := "cache/gtfs.zip"
-	bundleURL := "https://www.soundtransit.org/GTFS-rail/40_gtfs.zip"
-	err := utils.DownloadGTFSBundle(bundleURL, cachePath)
+	err := utils.DownloadGTFSBundle(*bundleUrl, cachePath)
 	if err != nil {
 		logger.Error("Failed to download GTFS bundle", "error", err)
 	} else {
@@ -68,7 +84,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(24 * time.Hour)
-			err := utils.DownloadGTFSBundle(bundleURL, cachePath)
+			err := utils.DownloadGTFSBundle(*bundleUrl, cachePath)
 			if err != nil {
 				logger.Error("Failed to download GTFS bundle", "error", err)
 			} else {
