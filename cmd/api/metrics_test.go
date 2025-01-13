@@ -114,8 +114,9 @@ func TestCheckBundleExpiration(t *testing.T) {
 	}
 
 	// This is the current gtfs.zip file in the testdata directory expected earliest and latest expiration days
-	expectedEarliest := int(time.Date(2024, 11, 22, 0, 0, 0, 0, time.UTC).Sub(time.Now()).Hours() / 24)
-	expectedLatest := int(time.Date(2025, 3, 28, 0, 0, 0, 0, time.UTC).Sub(time.Now()).Hours() / 24)
+	fixedTime := time.Date(2025, 1, 12, 20, 16, 38, 0, time.UTC)
+	expectedEarliest := int(time.Date(2024, 11, 22, 0, 0, 0, 0, time.UTC).Sub(fixedTime).Hours() / 24)
+	expectedLatest := int(time.Date(2025, 3, 28, 0, 0, 0, 0, time.UTC).Sub(fixedTime).Hours() / 24)
 
 	if earliest != expectedEarliest {
 		t.Errorf("Expected earliest expiration days to be %d, got %d", expectedEarliest, earliest)
