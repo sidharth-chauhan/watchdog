@@ -35,31 +35,37 @@ func main() {
 	flag.IntVar(&cfg.Port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.Env, "env", "development", "Environment (development|staging|production)")
 
-	bundleUrl := flag.String("url", "", "URL of the GTFS bundle")
+	serverName := flag.String("name", "", "Name of the OBA server")
+	serverID := flag.Int("id", 0, "ID of the OBA server")
+	baseURL := flag.String("base-url", "", "Base URL of the OBA server API")
+	apiKey := flag.String("api-key", "", "API key for the OBA server")
+	gtfsURL := flag.String("gtfs-url", "", "URL of the GTFS bundle")
+	tripUpdateURL := flag.String("trip-update-url", "", "URL for trip updates")
+	vehiclePositionURL := flag.String("vehicle-position-url", "", "URL for vehicle positions")
+
 	flag.Parse()
 
-	if *bundleUrl == "" {
-		fmt.Println("Error: URL is required. Use the -url flag to specify the GTFS bundle URL.")
-
+	if *serverName == "" || *serverID == 0 || *baseURL == "" || *apiKey == "" || *gtfsURL == "" || *tripUpdateURL == "" || *vehiclePositionURL == "" {
+		fmt.Println("Error: All flags are required.")
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	server := models.NewObaServer(
-		"Sound Transit",
-		1,
-		"https://api.pugetsound.onebusaway.org",
-		"org.onebusaway.iphone",
-		*bundleUrl,
-		"https://api.pugetsound.onebusaway.org/api/gtfs_realtime/trip-updates-for-agency/40.pb?key=org.onebusaway.iphone",
-		"https://api.pugetsound.onebusaway.org/api/gtfs_realtime/vehicle-positions-for-agency/40.pb?key=org.onebusaway.iphone",
+		*serverName,
+		*serverID,
+		*baseURL,
+		*apiKey,
+		*gtfsURL,
+		*tripUpdateURL,
+		*vehiclePositionURL,
 	)
 
 	cfg.Servers = []models.ObaServer{*server}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	hash := sha1.Sum([]byte(*bundleUrl))
+	hash := sha1.Sum([]byte(*gtfsURL))
 	hashStr := hex.EncodeToString(hash[:])
 
 	cacheDir := "cache"
@@ -73,7 +79,7 @@ func main() {
 	app.startMetricsCollection()
 
 	// Download the GTFS bundle on startup
-	err := utils.DownloadGTFSBundle(*bundleUrl, cachePath)
+	err := utils.DownloadGTFSBundle(*gtfsURL, cachePath)
 	if err != nil {
 		logger.Error("Failed to download GTFS bundle", "error", err)
 	} else {
@@ -84,7 +90,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(24 * time.Hour)
-			err := utils.DownloadGTFSBundle(*bundleUrl, cachePath)
+			err := utils.DownloadGTFSBundle(*gtfsURL, cachePath)
 			if err != nil {
 				logger.Error("Failed to download GTFS bundle", "error", err)
 			} else {

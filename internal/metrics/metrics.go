@@ -27,3 +27,20 @@ var (
 		Help: "Number of days until the latest GTFS bundle expiration",
 	}, []string{"agency_id"})
 )
+
+var (
+	AgenciesInStaticGtfs = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "oba_agencies_in_static_gtfs",
+		Help: "Number of agencies in the static GTFS file",
+	}, []string{"server_id"})
+
+	AgenciesInCoverageEndpoint = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "oba_agencies_in_coverage_endpoint",
+		Help: "Number of agencies in the agencies-with-coverage endpoint",
+	}, []string{"server_id"})
+
+	AgenciesMatch = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "oba_agencies_match",
+		Help: "Whether the number of agencies in the static GTFS file matches the agencies-with-coverage endpoint (1 = match, 0 = no match)",
+	}, []string{"server_id"})
+)
