@@ -39,8 +39,8 @@ var (
 		Help: "Number of agencies in the agencies-with-coverage endpoint",
 	}, []string{"server_id"})
 
-	AgenciesDifference = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "oba_agencies_difference",
-		Help: "Difference between the number of agencies in the static GTFS file and the agencies-with-coverage endpoint",
+	AgenciesMatch = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "oba_agencies_match",
+		Help: "Whether the number of agencies in the static GTFS file matches the agencies-with-coverage endpoint (1 = match, 0 = no match)",
 	}, []string{"server_id"})
 )
