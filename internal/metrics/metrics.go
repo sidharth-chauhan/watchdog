@@ -29,18 +29,18 @@ var (
 )
 
 var (
-	AgenciesInStaticGtfs = promauto.NewGauge(prometheus.GaugeOpts{
+	AgenciesInStaticGtfs = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "oba_agencies_in_static_gtfs",
 		Help: "Number of agencies in the static GTFS file",
-	})
+	}, []string{"server_id"})
 
-	AgenciesInCoverageEndpoint = promauto.NewGauge(prometheus.GaugeOpts{
+	AgenciesInCoverageEndpoint = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "oba_agencies_in_coverage_endpoint",
 		Help: "Number of agencies in the agencies-with-coverage endpoint",
-	})
+	}, []string{"server_id"})
 
-	AgenciesDifference = promauto.NewGauge(prometheus.GaugeOpts{
+	AgenciesDifference = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "oba_agencies_difference",
 		Help: "Difference between the number of agencies in the static GTFS file and the agencies-with-coverage endpoint",
-	})
+	}, []string{"server_id"})
 )
