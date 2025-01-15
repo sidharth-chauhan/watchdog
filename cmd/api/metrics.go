@@ -24,12 +24,12 @@ func (app *application) startMetricsCollection() {
 					continue
 				}
 
-				_, _, err = metrics.CheckBundleExpiration(cachePath, app.logger)
+				_, _, err = metrics.CheckBundleExpiration(cachePath, app.logger, time.Now())
 				if err != nil {
 					app.logger.Error("Failed to check GTFS bundle expiration", "error", err)
 				}
 
-				staticAgenciesNumber, err := metrics.CheckAgenciesWithCoverage(cachePath, app.logger)
+				staticAgenciesNumber, err := metrics.CheckAgenciesWithCoverage(cachePath, app.logger, app.config.Servers[0])
 				if err != nil {
 					app.logger.Error("Failed to check agencies with coverage", "error", err)
 					continue
@@ -43,15 +43,11 @@ func (app *application) startMetricsCollection() {
 
 				difference := staticAgenciesNumber - numberOfAgencies
 
-				metrics.AgenciesDifference.Set(float64(difference))
+				metrics.AgenciesDifference.WithLabelValues(app.config.Servers[0].ObaBaseURL).Set(float64(difference))
 
 				// to verify that the number of agencies in the static GTFS file matches the number of agencies in the agencies-with-coverage endpoint
 				// use this query in Prometheus: oba_agencies_difference == bool 0
-				if difference != 0 {
-					app.logger.Error("Number of agencies with coverage does not match", "static", staticAgenciesNumber, "oba", numberOfAgencies)
-				} else {
-					app.logger.Info("Number of agencies matches", "static", staticAgenciesNumber, "oba", numberOfAgencies)
-				}
+				metrics.AgenciesDifference.WithLabelValues(app.config.Servers[0].ObaBaseURL).Set(float64(difference))
 			}
 		}
 	}()
