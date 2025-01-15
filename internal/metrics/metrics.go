@@ -27,3 +27,20 @@ var (
 		Help: "Number of days until the latest GTFS bundle expiration",
 	}, []string{"agency_id"})
 )
+
+var (
+	AgenciesInStaticGtfs = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "oba_agencies_in_static_gtfs",
+		Help: "Number of agencies in the static GTFS file",
+	})
+
+	AgenciesInCoverageEndpoint = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "oba_agencies_in_coverage_endpoint",
+		Help: "Number of agencies in the agencies-with-coverage endpoint",
+	})
+
+	AgenciesDifference = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "oba_agencies_difference",
+		Help: "Difference between the number of agencies in the static GTFS file and the agencies-with-coverage endpoint",
+	})
+)
