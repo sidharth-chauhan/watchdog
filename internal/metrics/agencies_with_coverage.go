@@ -39,6 +39,20 @@ func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger, server mod
 		return 0, fmt.Errorf("no agencies found in GTFS bundle")
 	}
 
+	numOfRealtimeAgencies, err := GetAgenciesWithCoverage(server)
+
+	if err != nil {
+		return 0, err
+	}
+
+	matchValue := 0
+	if numOfRealtimeAgencies == len(staticData.Agencies) {
+		matchValue = 1
+	}
+
+	// 1 == match, 0 == no match
+	AgenciesMatch.WithLabelValues(server.ObaBaseURL).Set(float64(matchValue))
+
 	AgenciesInStaticGtfs.WithLabelValues(
 		server.ObaBaseURL,
 	).Set(float64(len(staticData.Agencies)))
