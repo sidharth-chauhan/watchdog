@@ -103,18 +103,20 @@ func TestCheckServer(t *testing.T) {
 }
 
 func TestCheckBundleExpiration(t *testing.T) {
+	fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
+	if err != nil {
+		t.Fatalf("failed to get absolute path: %v", err)
+	}
 
-    fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
-
+	fixedTime := time.Date(2025, 1, 12, 20, 16, 38, 0, time.UTC)
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	earliest, latest, err := metrics.CheckBundleExpiration(fixturePath, logger)
+	earliest, latest, err := metrics.CheckBundleExpiration(fixturePath, logger, fixedTime)
 	if err != nil {
 		t.Fatalf("CheckBundleExpiration failed: %v", err)
 	}
 
 	// This is the current gtfs.zip file in the testdata directory expected earliest and latest expiration days
-	fixedTime := time.Date(2025, 1, 12, 20, 16, 38, 0, time.UTC)
 	expectedEarliest := int(time.Date(2024, 11, 22, 0, 0, 0, 0, time.UTC).Sub(fixedTime).Hours() / 24)
 	expectedLatest := int(time.Date(2025, 3, 28, 0, 0, 0, 0, time.UTC).Sub(fixedTime).Hours() / 24)
 
@@ -143,5 +145,44 @@ func TestCheckBundleExpiration(t *testing.T) {
 	}
 	if latestMetric != float64(expectedLatest) {
 		t.Errorf("Expected latest expiration metric to be %v, got %v", expectedLatest, latestMetric)
+	}
+}
+
+func TestCheckAgenciesWithCoverage(t *testing.T) {
+
+	fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	agencies, err := metrics.CheckAgenciesWithCoverage(fixturePath, logger, models.ObaServer{
+		Name:       "Test Server",
+		ID:         999,
+		ObaBaseURL: "https://test.example.com",
+		ObaApiKey:  "test-key",
+	})
+
+	if err != nil {
+		t.Fatalf("CheckAgenciesWithCoverage failed: %v", err)
+	}
+
+	if err != nil {
+		t.Fatalf("CheckAgenciesWithCoverage failed: %v", err)
+	}
+
+	if agencies != 1 {
+		t.Errorf("Expected number of agencies with coverage to be 1, got %d", agencies)
+	}
+
+	// Current gtfs.zip file in the testdata directory has 1 agency
+	expectedAgenciesNumber := float64(1)
+
+	agenciesMetric, err := getMetricValue(metrics.AgenciesInStaticGtfs, map[string]string{
+		"server_id": "https://test.example.com",
+	})
+
+	if err != nil {
+		t.Errorf("Failed to get agencies metric value: %v", err)
+	}
+	if agenciesMetric != expectedAgenciesNumber {
+		t.Errorf("Expected agencies metric to be %v, got %v", expectedAgenciesNumber, agenciesMetric)
 	}
 }
