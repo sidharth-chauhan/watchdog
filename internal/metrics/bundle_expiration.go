@@ -10,7 +10,8 @@ import (
 )
 
 // CheckBundleExpiration calculates the number of days remaining until the GTFS bundle expires.
-func CheckBundleExpiration(cachePath string, logger *slog.Logger) (int, int, error) {
+func CheckBundleExpiration(cachePath string, logger *slog.Logger, currentTime time.Time) (int, int, error) {
+
 	file, err := os.Open(cachePath)
 	if err != nil {
 		return 0, 0, err
@@ -50,8 +51,8 @@ func CheckBundleExpiration(cachePath string, logger *slog.Logger) (int, int, err
 		}
 	}
 
-	daysUntilEarliestExpiration := int(earliestEndDate.Sub(time.Now()).Hours() / 24)
-	daysUntilLatestExpiration := int(latestEndDate.Sub(time.Now()).Hours() / 24)
+	daysUntilEarliestExpiration := int(earliestEndDate.Sub(currentTime).Hours() / 24)
+	daysUntilLatestExpiration := int(latestEndDate.Sub(currentTime).Hours() / 24)
 
 	BundleEarliestExpirationGauge.WithLabelValues("BundleExpiration").Set(float64(daysUntilEarliestExpiration))
 	BundleLatestExpirationGauge.WithLabelValues("BundleExpiration").Set(float64(daysUntilLatestExpiration))
