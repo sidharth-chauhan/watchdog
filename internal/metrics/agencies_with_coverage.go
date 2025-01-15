@@ -12,7 +12,7 @@ import (
 	"watchdog.onebusaway.org/internal/models"
 )
 
-func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger) (int, error) {
+func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger, server models.ObaServer) (int, error) {
 	file, err := os.Open(cachePath)
 	if err != nil {
 		return 0, err
@@ -39,7 +39,9 @@ func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger) (int, erro
 		return 0, fmt.Errorf("no agencies found in GTFS bundle")
 	}
 
-	AgenciesInStaticGtfs.Set(float64(len(staticData.Agencies)))
+	AgenciesInStaticGtfs.WithLabelValues(
+		server.ObaBaseURL,
+	).Set(float64(len(staticData.Agencies)))
 
 	return len(staticData.Agencies), nil
 }
@@ -58,7 +60,9 @@ func GetAgenciesWithCoverage(server models.ObaServer) (int, error) {
 		return 0, err
 	}
 
-	AgenciesInCoverageEndpoint.Set(float64(len(response.Data.List)))
+	AgenciesInCoverageEndpoint.WithLabelValues(
+		server.ObaBaseURL,
+	).Set(float64(len(response.Data.List)))
 
 	return len(response.Data.List), nil
 }
