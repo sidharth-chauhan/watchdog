@@ -149,40 +149,67 @@ func TestCheckBundleExpiration(t *testing.T) {
 }
 
 func TestCheckAgenciesWithCoverage(t *testing.T) {
-
 	fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
+	if err != nil {
+		t.Fatalf("Failed to get absolute path to testdata/gtfs.zip: %v", err)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	agencies, err := metrics.CheckAgenciesWithCoverage(fixturePath, logger, models.ObaServer{
+
+	requestChan := make(chan *http.Request, 1)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestChan <- r
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+            "code": 200,
+            "currentTime": 1234567890000,
+            "text": "OK",
+            "version": 2,
+            "data": {
+                "list": [
+                    {
+                        "agencyId": "1"
+                    }
+                ]
+            }
+        }`))
+	}))
+	defer ts.Close()
+
+	testServer := models.ObaServer{
 		Name:       "Test Server",
 		ID:         999,
-		ObaBaseURL: "https://test.example.com",
+		ObaBaseURL: ts.URL,
 		ObaApiKey:  "test-key",
-	})
+	}
 
+	numOfStaticAgencies, err := metrics.CheckAgenciesWithCoverage(fixturePath, logger, testServer)
 	if err != nil {
 		t.Fatalf("CheckAgenciesWithCoverage failed: %v", err)
 	}
 
+	numOfRealtimeAgencies, err := metrics.GetAgenciesWithCoverage(testServer)
 	if err != nil {
-		t.Fatalf("CheckAgenciesWithCoverage failed: %v", err)
+		t.Fatalf("GetAgenciesWithCoverage failed: %v", err)
 	}
 
-	if agencies != 1 {
-		t.Errorf("Expected number of agencies with coverage to be 1, got %d", agencies)
+	matchValue := 0
+	if numOfRealtimeAgencies == numOfStaticAgencies {
+		matchValue = 1
 	}
+	metrics.AgenciesMatch.WithLabelValues(testServer.ObaBaseURL).Set(float64(matchValue))
 
-	// Current gtfs.zip file in the testdata directory has 1 agency
-	expectedAgenciesNumber := float64(1)
-
-	agenciesMetric, err := getMetricValue(metrics.AgenciesInStaticGtfs, map[string]string{
-		"server_id": "https://test.example.com",
+	agencyMatchMetric, err := getMetricValue(metrics.AgenciesMatch, map[string]string{
+		"server_id": testServer.ObaBaseURL,
 	})
-
 	if err != nil {
-		t.Errorf("Failed to get agencies metric value: %v", err)
+		t.Errorf("Failed to get AgenciesMatch metric value: %v", err)
 	}
-	if agenciesMetric != expectedAgenciesNumber {
-		t.Errorf("Expected agencies metric to be %v, got %v", expectedAgenciesNumber, agenciesMetric)
+
+	if agencyMatchMetric != 1 {
+		t.Errorf("Expected agency match metric to be 1, got %v", agencyMatchMetric)
 	}
+
 }
