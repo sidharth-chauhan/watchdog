@@ -28,3 +28,5 @@ go.work.sum
 
 # cache files
 /cache/*
+
+profile.cov
