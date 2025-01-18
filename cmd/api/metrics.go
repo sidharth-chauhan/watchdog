@@ -1,13 +1,22 @@
 package main
 
 import (
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"watchdog.onebusaway.org/internal/metrics"
 	"watchdog.onebusaway.org/internal/utils"
 )
 
 func (app *application) startMetricsCollection() {
+
+	err := godotenv.Load()
+
+	if err != nil {
+		app.logger.Error("Failed to load .env file", "error", err)
+	}
+
 	ticker := time.NewTicker(30 * time.Second)
 	go func() {
 		for {
@@ -43,6 +52,13 @@ func (app *application) startMetricsCollection() {
 				if err != nil {
 					app.logger.Error("Failed to check agencies with coverage", "error", err)
 				}
+
+				// TODO: Add support for multiple servers
+				apiKey := os.Getenv("FEED_API_KEY")
+				apiValue := os.Getenv("FEED_API_VALUE")
+				vehiclePositionsURL := os.Getenv("VEHICLE_POSITIONS_URL")
+
+				metrics.CountVehiclePositions(vehiclePositionsURL, apiKey, apiValue)
 			}
 		}
 	}()

@@ -44,3 +44,10 @@ var (
 		Help: "Whether the number of agencies in the static GTFS file matches the agencies-with-coverage endpoint (1 = match, 0 = no match)",
 	}, []string{"server_id"})
 )
+
+var (
+	RealtimeVehiclePositions = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "realtime_vehicle_positions_count",
+		Help: "Number of realtime vehicle positions in the GTFS-RT feed",
+	})
+)
