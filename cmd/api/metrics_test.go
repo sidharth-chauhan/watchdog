@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jamespfennell/gtfs"
 	"watchdog.onebusaway.org/internal/metrics"
 	"watchdog.onebusaway.org/internal/models"
 )
@@ -212,4 +213,88 @@ func TestCheckAgenciesWithCoverage(t *testing.T) {
 		t.Errorf("Expected agency match metric to be 1, got %v", agencyMatchMetric)
 	}
 
+}
+
+func TestCheckVehicleCountMatch(t *testing.T) {
+	// Test case 1: Success scenario, but not matching
+	t.Run("Success", func(t *testing.T) {
+		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
+		defer gtfsRtServer.Close()
+
+		obaServer := setupObaServer(t, `{
+			"code": 200,
+			"currentTime": 1234567890000,
+			"text": "OK",
+			"version": 2,
+			"data": {
+				"list": [
+					{
+						"agencyId": "1"
+					}
+				]
+			}
+		}`, http.StatusOK)
+		defer obaServer.Close()
+
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: obaServer.URL,
+			ObaApiKey:  "test-key",
+		}
+
+		err := metrics.CheckVehicleCountMatch(gtfsRtServer.URL, "Authorization", "Bearer test-key", testServer)
+		if err != nil {
+			t.Fatalf("CheckVehicleCountMatch failed: %v", err)
+		}
+
+		realtimeData, err := gtfs.ParseRealtime(readFixture(t, "gtfs_rt_feed_vehicles.pb"), &gtfs.ParseRealtimeOptions{})
+		if err != nil {
+			t.Fatalf("Failed to parse GTFS-RT fixture data: %v", err)
+		}
+
+		t.Log("Number of vehicles in GTFS-RT feed:", len(realtimeData.Vehicles))
+	})
+
+	t.Run("GTFS-RT Error", func(t *testing.T) {
+		gtfsRtServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer gtfsRtServer.Close()
+
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: "http://example.com",
+			ObaApiKey:  "test-key",
+		}
+
+		err := metrics.CheckVehicleCountMatch(gtfsRtServer.URL, "Authorization", "Bearer test-key", testServer)
+		if err == nil {
+			t.Fatal("Expected an error but got nil")
+		}
+		t.Log("Received expected error:", err)
+	})
+
+	// Test case 3: OBA API server returns an error
+	t.Run("OBA API Error", func(t *testing.T) {
+		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
+		defer gtfsRtServer.Close()
+
+		obaServer := setupObaServer(t, `{}`, http.StatusInternalServerError)
+		defer obaServer.Close()
+
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: obaServer.URL,
+			ObaApiKey:  "test-key",
+		}
+
+		err := metrics.CheckVehicleCountMatch(gtfsRtServer.URL, "Authorization", "Bearer test-key", testServer)
+		if err == nil {
+			t.Fatal("Expected an error but got nil")
+		}
+		t.Log("Received expected error:", err)
+	})
 }
