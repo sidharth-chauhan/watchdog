@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-
 func DownloadGTFSBundle(url string, cachePath string) error {
 	resp, err := http.Get(url)
 
@@ -23,8 +22,7 @@ func DownloadGTFSBundle(url string, cachePath string) error {
 
 	defer out.Close()
 
-
 	_, err = io.Copy(out, resp.Body)
 
-	return err;
+	return err
 }
