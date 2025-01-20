@@ -38,19 +38,10 @@ func (app *application) startMetricsCollection() {
 					app.logger.Error("Failed to check GTFS bundle expiration", "error", err)
 				}
 
-				numOfStaticAgencies, err := metrics.CheckAgenciesWithCoverage(cachePath, app.logger, app.config.Servers[0])
-				numOfRealtimeAgencies, err := metrics.GetAgenciesWithCoverage(app.config.Servers[0])
-
-				matchValue := 0
-				if numOfRealtimeAgencies == numOfStaticAgencies {
-					matchValue = 1
-				}
-
-				// 1 == match, 0 == no match
-				metrics.AgenciesMatch.WithLabelValues(app.config.Servers[0].ObaBaseURL).Set(float64(matchValue))
+				err = metrics.CheckAgenciesWithCoverageMatch(cachePath, app.logger, app.config.Servers[0])
 
 				if err != nil {
-					app.logger.Error("Failed to check agencies with coverage", "error", err)
+					app.logger.Error("Failed to check agencies with coverage match metric", "error", err)
 				}
 
 				// TODO: Add support for multiple servers
@@ -58,7 +49,11 @@ func (app *application) startMetricsCollection() {
 				apiValue := os.Getenv("FEED_API_VALUE")
 				vehiclePositionsURL := os.Getenv("VEHICLE_POSITIONS_URL")
 
-				metrics.CountVehiclePositions(vehiclePositionsURL, apiKey, apiValue)
+				err = metrics.CheckVehicleCountMatch(vehiclePositionsURL, apiKey, apiValue, app.config.Servers[0])
+
+				if err != nil {
+					app.logger.Error("Failed to check vehicle count match metric", "error", err)
+				}
 			}
 		}
 	}()

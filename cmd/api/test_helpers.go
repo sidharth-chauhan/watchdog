@@ -1,11 +1,15 @@
 package main
 
 import (
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
-	"log/slog"
-	"os"
-	"testing"
 	"watchdog.onebusaway.org/internal/server"
 
 	"watchdog.onebusaway.org/internal/models"
@@ -73,4 +77,49 @@ func getMetricsForTesting(t *testing.T, metric *prometheus.GaugeVec) {
 	for m := range ch {
 		t.Logf("Found metric: %v", m.Desc())
 	}
+}
+
+func setupGtfsRtServer(t *testing.T, fixturePath string) *httptest.Server {
+	t.Helper()
+
+	gtfsRtFixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", fixturePath))
+	if err != nil {
+		t.Fatalf("Failed to get absolute path to testdata/%s: %v", fixturePath, err)
+	}
+
+	gtfsRtFileData, err := os.ReadFile(gtfsRtFixturePath)
+	if err != nil {
+		t.Fatalf("Failed to read GTFS-RT fixture file: %v", err)
+	}
+
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Write(gtfsRtFileData)
+	}))
+}
+
+func setupObaServer(t *testing.T, response string, statusCode int) *httptest.Server {
+	t.Helper()
+
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		w.Write([]byte(response))
+	}))
+}
+
+func readFixture(t *testing.T, fixturePath string) []byte {
+	t.Helper()
+
+	absPath, err := filepath.Abs(filepath.Join("..", "..", "testdata", fixturePath))
+	if err != nil {
+		t.Fatalf("Failed to get absolute path to testdata/%s: %v", fixturePath, err)
+	}
+
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatalf("Failed to read fixture file: %v", err)
+	}
+
+	return data
 }
