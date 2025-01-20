@@ -150,69 +150,124 @@ func TestCheckBundleExpiration(t *testing.T) {
 }
 
 func TestCheckAgenciesWithCoverage(t *testing.T) {
-	fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
-	if err != nil {
-		t.Fatalf("Failed to get absolute path to testdata/gtfs.zip: %v", err)
-	}
+	// Test case: Successful execution
+	t.Run("Success", func(t *testing.T) {
+		fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
+		if err != nil {
+			t.Fatalf("Failed to get absolute path to testdata/gtfs.zip: %v", err)
+		}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	requestChan := make(chan *http.Request, 1)
+		requestChan := make(chan *http.Request, 1)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestChan <- r
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestChan <- r
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
-            "code": 200,
-            "currentTime": 1234567890000,
-            "text": "OK",
-            "version": 2,
-            "data": {
-                "list": [
-                    {
-                        "agencyId": "1"
-                    }
-                ]
-            }
-        }`))
-	}))
-	defer ts.Close()
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{
+                "code": 200,
+                "currentTime": 1234567890000,
+                "text": "OK",
+                "version": 2,
+                "data": {
+                    "list": [
+                        {
+                            "agencyId": "1"
+                        }
+                    ]
+                }
+            }`))
+		}))
+		defer ts.Close()
 
-	testServer := models.ObaServer{
-		Name:       "Test Server",
-		ID:         999,
-		ObaBaseURL: ts.URL,
-		ObaApiKey:  "test-key",
-	}
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: ts.URL,
+			ObaApiKey:  "test-key",
+		}
 
-	numOfStaticAgencies, err := metrics.CheckAgenciesWithCoverage(fixturePath, logger, testServer)
-	if err != nil {
-		t.Fatalf("CheckAgenciesWithCoverage failed: %v", err)
-	}
+		err = metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
+		if err != nil {
+			t.Fatalf("CheckAgenciesWithCoverageMatch failed: %v", err)
+		}
 
-	numOfRealtimeAgencies, err := metrics.GetAgenciesWithCoverage(testServer)
-	if err != nil {
-		t.Fatalf("GetAgenciesWithCoverage failed: %v", err)
-	}
+		agencyMatchMetric, err := getMetricValue(metrics.AgenciesMatch, map[string]string{
+			"server_id": testServer.ObaBaseURL,
+		})
+		if err != nil {
+			t.Errorf("Failed to get AgenciesMatch metric value: %v", err)
+		}
 
-	matchValue := 0
-	if numOfRealtimeAgencies == numOfStaticAgencies {
-		matchValue = 1
-	}
-	metrics.AgenciesMatch.WithLabelValues(testServer.ObaBaseURL).Set(float64(matchValue))
-
-	agencyMatchMetric, err := getMetricValue(metrics.AgenciesMatch, map[string]string{
-		"server_id": testServer.ObaBaseURL,
+		if agencyMatchMetric != 1 {
+			t.Errorf("Expected agency match metric to be 1, got %v", agencyMatchMetric)
+		}
 	})
-	if err != nil {
-		t.Errorf("Failed to get AgenciesMatch metric value: %v", err)
-	}
 
-	if agencyMatchMetric != 1 {
-		t.Errorf("Expected agency match metric to be 1, got %v", agencyMatchMetric)
-	}
+	// Test case: Error opening file
+	t.Run("ErrorOpeningFile", func(t *testing.T) {
+		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: "http://example.com",
+			ObaApiKey:  "test-key",
+		}
+
+		err := metrics.CheckAgenciesWithCoverageMatch("invalid/path/to/gtfs.zip", logger, testServer)
+		if err == nil {
+			t.Fatal("Expected an error but got nil")
+		}
+		t.Log("Received expected error:", err)
+	})
+
+	// Test case: Error reading file
+	t.Run("ErrorReadingFile", func(t *testing.T) {
+		fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "empty.zip"))
+		if err != nil {
+			t.Fatalf("Failed to get absolute path to testdata/empty.zip: %v", err)
+		}
+
+		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: "http://example.com",
+			ObaApiKey:  "test-key",
+		}
+
+		err = metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
+		if err == nil {
+			t.Fatal("Expected an error but got nil")
+		}
+		t.Log("Received expected error:", err)
+	})
+
+	// Test case: Error parsing GTFS data
+	t.Run("ErrorParsingGTFSData", func(t *testing.T) {
+		fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "invalid_gtfs.zip"))
+		if err != nil {
+			t.Fatalf("Failed to get absolute path to testdata/invalid_gtfs.zip: %v", err)
+		}
+
+		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+		testServer := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: "http://example.com",
+			ObaApiKey:  "test-key",
+		}
+
+		err = metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
+		if err == nil {
+			t.Fatal("Expected an error but got nil")
+		}
+		t.Log("Received expected error:", err)
+	})
 }
 
 func TestCheckVehicleCountMatch(t *testing.T) {
