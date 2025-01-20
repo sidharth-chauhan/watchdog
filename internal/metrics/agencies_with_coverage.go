@@ -66,3 +66,21 @@ func GetAgenciesWithCoverage(server models.ObaServer) (int, error) {
 
 	return len(response.Data.List), nil
 }
+
+func CheckAgenciesWithCoverageMatch(cachePath string, logger *slog.Logger, server models.ObaServer) error {
+	staticGtfsAgenciesCount, err := CheckAgenciesWithCoverage(cachePath, logger, server)
+	if err != nil {
+		return err
+	}
+
+	coverageAgenciesCount, err := GetAgenciesWithCoverage(server)
+
+	matchValue := 0
+	if coverageAgenciesCount == staticGtfsAgenciesCount {
+		matchValue = 1
+	}
+
+	AgenciesMatch.WithLabelValues(server.ObaBaseURL).Set(float64(matchValue))
+
+	return nil
+}
