@@ -65,6 +65,8 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	logger.Error("woot!!!")
+
 	hash := sha1.Sum([]byte(*gtfsURL))
 	hashStr := hex.EncodeToString(hash[:])
 
