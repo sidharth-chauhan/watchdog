@@ -1,6 +1,6 @@
 # watchdog
 
-[![Coverage Status](https://coveralls.io/repos/github/OneBusAway/watchdog/badge.svg?branch=ci)](https://coveralls.io/github/OneBusAway/watchdog?branch=ci)
+[![Coverage Status](https://coveralls.io/repos/github/OneBusAway/watchdog/badge.svg?branch=main)](https://coveralls.io/github/OneBusAway/watchdog?branch=main)
 
 Golang-based Watchdog service for OBA REST API servers
 
