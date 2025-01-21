@@ -49,7 +49,7 @@ func main() {
 	flag.Parse()
 
 	if (*configFile != "" && *configURL != "") || (*configFile != "" && len(flag.Args()) > 0) || (*configURL != "" && len(flag.Args()) > 0) {
-		fmt.Println("Error: Only one of --config-file, --config-url, or raw config params can be specified.")
+		fmt.Println("Error: Only one of --config-file or --config-url can be specified.")
 		flag.Usage()
 		os.Exit(1)
 	}
