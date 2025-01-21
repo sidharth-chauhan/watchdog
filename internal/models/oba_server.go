@@ -2,17 +2,19 @@ package models
 
 // ObaServer represents a OneBusAway server configuration
 type ObaServer struct {
-	Name               string
-	ID                 int
-	ObaBaseURL         string
-	ObaApiKey          string
-	GtfsUrl            string
-	TripUpdateUrl      string
-	VehiclePositionUrl string
+	Name               string `json:"name"`
+	ID                 int    `json:"id"`
+	ObaBaseURL         string `json:"oba_base_url"`
+	ObaApiKey          string `json:"oba_api_key"`
+	GtfsUrl            string `json:"gtfs_url"`
+	TripUpdateUrl      string `json:"trip_update_url"`
+	VehiclePositionUrl string `json:"vehicle_position_url"`
+	GtfsRtApiKey       string `json:"gtfs_rt_api_key"`
+	GtfsRtApiValue     string `json:"gtfs_rt_api_value"`
 }
 
 // NewObaServer creates a new ObaServer instance with the provided configuration
-func NewObaServer(name string, id int, baseURL, apiKey, gtfsURL, tripUpdateURL, vehiclePositionURL string) *ObaServer {
+func NewObaServer(name string, id int, baseURL, apiKey, gtfsURL, tripUpdateURL, vehiclePositionURL, gtfsRtApiKey, gtfsRtApiValue string) *ObaServer {
 	return &ObaServer{
 		Name:               name,
 		ID:                 id,
@@ -21,5 +23,7 @@ func NewObaServer(name string, id int, baseURL, apiKey, gtfsURL, tripUpdateURL, 
 		GtfsUrl:            gtfsURL,
 		TripUpdateUrl:      tripUpdateURL,
 		VehiclePositionUrl: vehiclePositionURL,
+		GtfsRtApiKey:       gtfsRtApiKey,
+		GtfsRtApiValue:     gtfsRtApiValue,
 	}
 }
