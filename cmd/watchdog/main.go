@@ -42,8 +42,8 @@ func main() {
 	var (
 		configFile     = flag.String("config-file", "", "Path to a local JSON configuration file")
 		configURL      = flag.String("config-url", "", "URL to a remote JSON configuration file")
-		configAuthUser = os.Getenv("CONFIG_AUTH_USER")
-		configAuthPass = os.Getenv("CONFIG_AUTH_PASS")
+		configAuthUser = flag.String("config-auth-user", "", "Username for basic authentication (if using --config-url)")
+		configAuthPass = flag.String("config-auth-pass", "", "Password for basic authentication (if using --config-url)")
 	)
 
 	flag.Parse()
@@ -60,7 +60,7 @@ func main() {
 	if *configFile != "" {
 		servers, err = loadConfigFromFile(*configFile)
 	} else if *configURL != "" {
-		servers, err = loadConfigFromURL(*configURL, configAuthUser, configAuthPass)
+		servers, err = loadConfigFromURL(*configURL, *configAuthUser, *configAuthPass)
 	} else {
 		fmt.Println("Error: No configuration provided. Use --config-file or --config-url.")
 		flag.Usage()
@@ -122,7 +122,7 @@ func main() {
 		go func() {
 			for {
 				time.Sleep(time.Minute)
-				newServers, err := loadConfigFromURL(*configURL, configAuthUser, configAuthPass)
+				newServers, err := loadConfigFromURL(*configURL, *configAuthUser, *configAuthPass)
 				if err != nil {
 					logger.Error("Failed to refresh remote config", "error", err)
 					continue
