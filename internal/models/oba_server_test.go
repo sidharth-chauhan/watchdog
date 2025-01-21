@@ -10,6 +10,8 @@ func TestNewObaServer(t *testing.T) {
 	gtfsURL := "https://test.gtfs.url"
 	tripUpdateURL := "https://test.tripupdate.url"
 	vehiclePositionURL := "https://test.vehicleposition.url"
+	GtfsRtApiKey := "test-gtfs-rt-api-key"
+	GtfsRtApiValue := "test-gtfs-rt-api-value"
 
 	server := NewObaServer(
 		name,
@@ -19,6 +21,8 @@ func TestNewObaServer(t *testing.T) {
 		gtfsURL,
 		tripUpdateURL,
 		vehiclePositionURL,
+		GtfsRtApiKey,
+		GtfsRtApiValue,
 	)
 
 	tests := []struct {

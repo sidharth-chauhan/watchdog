@@ -3,12 +3,15 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"watchdog.onebusaway.org/internal/models"
@@ -27,6 +30,7 @@ const version = "1.0.0"
 type application struct {
 	config server.Config
 	logger *slog.Logger
+	mu     sync.RWMutex
 }
 
 func main() {
@@ -35,37 +39,51 @@ func main() {
 	flag.IntVar(&cfg.Port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.Env, "env", "development", "Environment (development|staging|production)")
 
-	serverName := flag.String("name", "", "Name of the OBA server")
-	serverID := flag.Int("id", 0, "ID of the OBA server")
-	baseURL := flag.String("base-url", "", "Base URL of the OBA server API")
-	apiKey := flag.String("api-key", "", "API key for the OBA server")
-	gtfsURL := flag.String("gtfs-url", "", "URL of the GTFS bundle")
-	tripUpdateURL := flag.String("trip-update-url", "", "URL for trip updates")
-	vehiclePositionURL := flag.String("vehicle-position-url", "", "URL for vehicle positions")
+	var (
+		configFile     = flag.String("config-file", "", "Path to a local JSON configuration file")
+		configURL      = flag.String("config-url", "", "URL to a remote JSON configuration file")
+		configAuthUser = os.Getenv("CONFIG_AUTH_USER")
+		configAuthPass = os.Getenv("CONFIG_AUTH_PASS")
+	)
 
 	flag.Parse()
 
-	if *serverName == "" || *serverID == 0 || *baseURL == "" || *apiKey == "" || *gtfsURL == "" || *tripUpdateURL == "" || *vehiclePositionURL == "" {
-		fmt.Println("Error: All flags are required.")
+	if (*configFile != "" && *configURL != "") || (*configFile != "" && len(flag.Args()) > 0) || (*configURL != "" && len(flag.Args()) > 0) {
+		fmt.Println("Error: Only one of --config-file, --config-url, or raw config params can be specified.")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	server := models.NewObaServer(
-		*serverName,
-		*serverID,
-		*baseURL,
-		*apiKey,
-		*gtfsURL,
-		*tripUpdateURL,
-		*vehiclePositionURL,
-	)
+	var servers []models.ObaServer
+	var err error
 
-	cfg.Servers = []models.ObaServer{*server}
+	if *configFile != "" {
+		servers, err = loadConfigFromFile(*configFile)
+	} else if *configURL != "" {
+		servers, err = loadConfigFromURL(*configURL, configAuthUser, configAuthPass)
+	} else {
+		fmt.Println("Error: No configuration provided. Use --config-file or --config-url.")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if err != nil {
+		fmt.Printf("Error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(servers) == 0 {
+		fmt.Println("Error: No servers found in configuration.")
+		os.Exit(1)
+	}
+
+	cfg.Servers = servers
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	hash := sha1.Sum([]byte(*gtfsURL))
+	// For now use the first gtfs url
+	gtfsURL := servers[0].GtfsUrl
+	hash := sha1.Sum([]byte(gtfsURL))
 	hashStr := hex.EncodeToString(hash[:])
 
 	cacheDir := "cache"
@@ -79,7 +97,7 @@ func main() {
 	app.startMetricsCollection()
 
 	// Download the GTFS bundle on startup
-	err := utils.DownloadGTFSBundle(*gtfsURL, cachePath)
+	err = utils.DownloadGTFSBundle(gtfsURL, cachePath)
 	if err != nil {
 		logger.Error("Failed to download GTFS bundle", "error", err)
 	} else {
@@ -90,7 +108,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(24 * time.Hour)
-			err := utils.DownloadGTFSBundle(*gtfsURL, cachePath)
+			err := utils.DownloadGTFSBundle(gtfsURL, cachePath)
 			if err != nil {
 				logger.Error("Failed to download GTFS bundle", "error", err)
 			} else {
@@ -98,6 +116,26 @@ func main() {
 			}
 		}
 	}()
+
+	// If a remote URL is specified, refresh the configuration every minute
+	if *configURL != "" {
+		go func() {
+			for {
+				time.Sleep(time.Minute)
+				newServers, err := loadConfigFromURL(*configURL, configAuthUser, configAuthPass)
+				if err != nil {
+					logger.Error("Failed to refresh remote config", "error", err)
+					continue
+				}
+
+				app.mu.Lock()
+				cfg.Servers = newServers
+				app.mu.Unlock()
+
+				logger.Info("Successfully refreshed server configuration")
+			}
+		}()
+	}
 
 	// Use the httprouter instance returned by app.routes() as the server handler.
 	srv := &http.Server{
@@ -113,4 +151,52 @@ func main() {
 	err = srv.ListenAndServe()
 	logger.Error(err.Error())
 	os.Exit(1)
+}
+
+func loadConfigFromFile(filePath string) ([]models.ObaServer, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	var servers []models.ObaServer
+	if err := json.Unmarshal(data, &servers); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
+	}
+
+	return servers, nil
+}
+
+func loadConfigFromURL(url, authUser, authPass string) ([]models.ObaServer, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	if authUser != "" && authPass != "" {
+		req.SetBasicAuth(authUser, authPass)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch remote config: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("remote config returned status: %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read remote config: %v", err)
+	}
+
+	var servers []models.ObaServer
+	if err := json.Unmarshal(data, &servers); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
+	}
+
+	return servers, nil
 }

@@ -49,6 +49,8 @@ func newTestApplication(t *testing.T) *application {
 		"",
 		"",
 		"",
+		"",
+		"",
 	)
 
 	cfg := server.NewConfig(
