@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -22,7 +21,12 @@ func (app *application) startMetricsCollection() {
 		for {
 			select {
 			case <-ticker.C:
-				for _, server := range app.config.Servers {
+
+				app.mu.Lock()
+				servers := app.config.Servers
+				app.mu.Unlock()
+
+				for _, server := range servers {
 					metrics.ServerPing(server)
 				}
 
@@ -44,12 +48,7 @@ func (app *application) startMetricsCollection() {
 					app.logger.Error("Failed to check agencies with coverage match metric", "error", err)
 				}
 
-				// TODO: Add support for multiple servers
-				apiKey := os.Getenv("FEED_API_KEY")
-				apiValue := os.Getenv("FEED_API_VALUE")
-				vehiclePositionsURL := os.Getenv("VEHICLE_POSITIONS_URL")
-
-				err = metrics.CheckVehicleCountMatch(vehiclePositionsURL, apiKey, apiValue, app.config.Servers[0])
+				err = metrics.CheckVehicleCountMatch(app.config.Servers[0].VehiclePositionUrl, app.config.Servers[0].GtfsRtApiKey, app.config.Servers[0].GtfsRtApiValue, app.config.Servers[0])
 
 				if err != nil {
 					app.logger.Error("Failed to check vehicle count match metric", "error", err)
