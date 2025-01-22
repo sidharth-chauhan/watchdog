@@ -51,6 +51,7 @@ func newTestApplication(t *testing.T) *application {
 		"",
 		"",
 		"",
+		"",
 	)
 
 	cfg := server.NewConfig(
@@ -84,10 +85,7 @@ func getMetricsForTesting(t *testing.T, metric *prometheus.GaugeVec) {
 func setupGtfsRtServer(t *testing.T, fixturePath string) *httptest.Server {
 	t.Helper()
 
-	gtfsRtFixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", fixturePath))
-	if err != nil {
-		t.Fatalf("Failed to get absolute path to testdata/%s: %v", fixturePath, err)
-	}
+	gtfsRtFixturePath := getFixturePath(t, fixturePath)
 
 	gtfsRtFileData, err := os.ReadFile(gtfsRtFixturePath)
 	if err != nil {
@@ -124,4 +122,34 @@ func readFixture(t *testing.T, fixturePath string) []byte {
 	}
 
 	return data
+}
+
+func getFixturePath(t *testing.T, fixturePath string) string {
+	t.Helper()
+
+	absPath, err := filepath.Abs(filepath.Join("..", "..", "testdata", fixturePath))
+	if err != nil {
+		t.Fatalf("Failed to get absolute path to testdata/%s: %v", fixturePath, err)
+	}
+
+	return absPath
+}
+
+func createTestServer(url, name string, id int, apiKey string, vehiclePositionUrl string, gtfsRtApiKey string, gtfsRtApiValue string, agencyID string) models.ObaServer {
+	return models.ObaServer{
+		Name:               name,
+		ID:                 id,
+		ObaBaseURL:         url,
+		VehiclePositionUrl: vehiclePositionUrl,
+		ObaApiKey:          apiKey,
+		GtfsRtApiKey:       gtfsRtApiKey,
+		GtfsRtApiValue:     gtfsRtApiValue,
+		AgencyID:           agencyID,
+	}
+}
+func setupTestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(handler)
+	t.Cleanup(func() { ts.Close() })
+	return ts
 }
