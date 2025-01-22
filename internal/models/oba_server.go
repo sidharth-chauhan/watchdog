@@ -11,10 +11,11 @@ type ObaServer struct {
 	VehiclePositionUrl string `json:"vehicle_position_url"`
 	GtfsRtApiKey       string `json:"gtfs_rt_api_key"`
 	GtfsRtApiValue     string `json:"gtfs_rt_api_value"`
+	AgencyID           string `json:"agency_id"`
 }
 
 // NewObaServer creates a new ObaServer instance with the provided configuration
-func NewObaServer(name string, id int, baseURL, apiKey, gtfsURL, tripUpdateURL, vehiclePositionURL, gtfsRtApiKey, gtfsRtApiValue string) *ObaServer {
+func NewObaServer(name string, id int, baseURL, apiKey, gtfsURL, tripUpdateURL, vehiclePositionURL, gtfsRtApiKey, gtfsRtApiValue string, agencyID string) *ObaServer {
 	return &ObaServer{
 		Name:               name,
 		ID:                 id,
@@ -25,5 +26,6 @@ func NewObaServer(name string, id int, baseURL, apiKey, gtfsURL, tripUpdateURL, 
 		VehiclePositionUrl: vehiclePositionURL,
 		GtfsRtApiKey:       gtfsRtApiKey,
 		GtfsRtApiValue:     gtfsRtApiValue,
+		AgencyID:           agencyID,
 	}
 }

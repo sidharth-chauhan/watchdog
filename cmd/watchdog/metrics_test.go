@@ -6,14 +6,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jamespfennell/gtfs"
 	"watchdog.onebusaway.org/internal/metrics"
-	"watchdog.onebusaway.org/internal/models"
 )
 
 func TestMetricsEndpoint(t *testing.T) {
@@ -21,27 +19,20 @@ func TestMetricsEndpoint(t *testing.T) {
 	app := newTestApplication(t)
 
 	// Register the metric without starting the collection routine
-	metrics.ObaApiStatus.WithLabelValues(
-		"1",
-		"https://test.example.com",
-	).Set(1)
-
+	metrics.ObaApiStatus.WithLabelValues("1", "https://test.example.com").Set(1)
 	// Create a test server
 	ts := httptest.NewServer(app.routes())
 	defer ts.Close()
-
 	// Make a request to the metrics endpoint
 	resp, err := http.Get(ts.URL + "/metrics")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("want %d; got %d", http.StatusOK, resp.StatusCode)
 	}
-
 	// Check that the response contains our metric
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -54,65 +45,35 @@ func TestMetricsEndpoint(t *testing.T) {
 }
 
 func TestCheckServer(t *testing.T) {
-	requestChan := make(chan *http.Request, 1)
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Store the incoming request
-		requestChan <- r
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"code":200,"currentTime":1234567890000,"text":"OK","version":2,"data":{"entry":{"readableTime":"Test Time"}}}`))
-	}))
+	ts := setupObaServer(t, `{"code":200,"currentTime":1234567890000,"text":"OK","version":2,"data":{"entry":{"readableTime":"Test Time"}}}`, http.StatusOK)
 	defer ts.Close()
 
-	testServer := models.ObaServer{
-		Name:       "Test Server",
-		ID:         999,
-		ObaBaseURL: ts.URL,
-		ObaApiKey:  "test-key",
-	}
+	testServer := createTestServer(ts.URL, "Test Server", 999, "test-key", "http://example.com", "test-api-value", "test-api-key", "1")
 
-	// Test the checkServer function
 	metrics.ServerPing(testServer)
-
-	// Wait a brief moment for metrics to be updated
 	time.Sleep(100 * time.Millisecond)
 
-	// Get and log all labels that are currently set for this metric
-	metricChan := make(chan float64)
-	go func() {
-		metric, err := getMetricValue(metrics.ObaApiStatus, map[string]string{
-			"server_id":  "999",
-			"server_url": testServer.ObaBaseURL,
-		})
-		if err != nil {
-			t.Errorf("Failed to get metric value: %v", err)
-		}
-		//t.Logf("Got metric value: %v with labels server_id=999, server_url=%s",
-		//	metric, testServer.ObaBaseURL)
-		metricChan <- metric
-	}()
+	metricValue, err := getMetricValue(metrics.ObaApiStatus, map[string]string{
+		"server_id":  "999",
+		"server_url": testServer.ObaBaseURL,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	select {
-	case metricValue := <-metricChan:
-		if metricValue != 1 {
-			t.Errorf("Expected metric value to be 1 (working), got %v", metricValue)
-		}
-	case <-time.After(2 * time.Second):
-		t.Error("Timeout waiting for metric value")
+	if metricValue != 1 {
+		t.Errorf("Expected metric value to be 1 (working), got %v", metricValue)
 	}
 }
 
 func TestCheckBundleExpiration(t *testing.T) {
-	fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
-	if err != nil {
-		t.Fatalf("failed to get absolute path: %v", err)
-	}
-
+	fixturePath := getFixturePath(t, "gtfs.zip")
 	fixedTime := time.Date(2025, 1, 12, 20, 16, 38, 0, time.UTC)
 
+	testServer := createTestServer("www.example.com", "Test Server", 999, "", "www.example.com", "test-api-value", "test-api-key", "1")
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	earliest, latest, err := metrics.CheckBundleExpiration(fixturePath, logger, fixedTime)
+	earliest, latest, err := metrics.CheckBundleExpiration(fixturePath, logger, fixedTime, testServer)
 	if err != nil {
 		t.Fatalf("CheckBundleExpiration failed: %v", err)
 	}
@@ -128,9 +89,7 @@ func TestCheckBundleExpiration(t *testing.T) {
 		t.Errorf("Expected latest expiration days to be %d, got %d", expectedLatest, latest)
 	}
 
-	earliestMetric, err := getMetricValue(metrics.BundleEarliestExpirationGauge, map[string]string{
-		"agency_id": "BundleExpiration",
-	})
+	earliestMetric, err := getMetricValue(metrics.BundleEarliestExpirationGauge, map[string]string{"server_id": "999"})
 	if err != nil {
 		t.Errorf("Failed to get earliest expiration metric value: %v", err)
 	}
@@ -138,9 +97,7 @@ func TestCheckBundleExpiration(t *testing.T) {
 		t.Errorf("Expected earliest expiration metric to be %v, got %v", expectedEarliest, earliestMetric)
 	}
 
-	latestMetric, err := getMetricValue(metrics.BundleLatestExpirationGauge, map[string]string{
-		"agency_id": "BundleExpiration",
-	})
+	latestMetric, err := getMetricValue(metrics.BundleLatestExpirationGauge, map[string]string{"server_id": "999"})
 	if err != nil {
 		t.Errorf("Failed to get latest expiration metric value: %v", err)
 	}
@@ -151,51 +108,22 @@ func TestCheckBundleExpiration(t *testing.T) {
 
 func TestCheckAgenciesWithCoverage(t *testing.T) {
 	// Test case: Successful execution
-	t.Run("Success", func(t *testing.T) {
-		fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "gtfs.zip"))
-		if err != nil {
-			t.Fatalf("Failed to get absolute path to testdata/gtfs.zip: %v", err)
-		}
 
+	t.Run("Success", func(t *testing.T) {
+		fixturePath := getFixturePath(t, "gtfs.zip")
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-		requestChan := make(chan *http.Request, 1)
-
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestChan <- r
-
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{
-                "code": 200,
-                "currentTime": 1234567890000,
-                "text": "OK",
-                "version": 2,
-                "data": {
-                    "list": [
-                        {
-                            "agencyId": "1"
-                        }
-                    ]
-                }
-            }`))
-		}))
+		ts := setupObaServer(t, `{"code":200,"currentTime":1234567890000,"text":"OK","version":2,"data":{"list":[{"agencyId":"1"}]}}`, http.StatusOK)
 		defer ts.Close()
 
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: ts.URL,
-			ObaApiKey:  "test-key",
-		}
+		testServer := createTestServer(ts.URL, "Test Server", 999, "test-key", "http://example.com", "test-api-value", "test-api-key", "1")
 
-		err = metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
+		err := metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
 		if err != nil {
 			t.Fatalf("CheckAgenciesWithCoverageMatch failed: %v", err)
 		}
 
-		agencyMatchMetric, err := getMetricValue(metrics.AgenciesMatch, map[string]string{
-			"server_id": testServer.ObaBaseURL,
-		})
+		agencyMatchMetric, err := getMetricValue(metrics.AgenciesMatch, map[string]string{"server_id": "999"})
 		if err != nil {
 			t.Errorf("Failed to get AgenciesMatch metric value: %v", err)
 		}
@@ -208,13 +136,7 @@ func TestCheckAgenciesWithCoverage(t *testing.T) {
 	// Test case: Error opening file
 	t.Run("ErrorOpeningFile", func(t *testing.T) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: "http://example.com",
-			ObaApiKey:  "test-key",
-		}
+		testServer := createTestServer("http://example.com", "Test Server", 999, "test-key", "http://example.com", "test-api-value", "test-api-key", "1")
 
 		err := metrics.CheckAgenciesWithCoverageMatch("invalid/path/to/gtfs.zip", logger, testServer)
 		if err == nil {
@@ -225,21 +147,11 @@ func TestCheckAgenciesWithCoverage(t *testing.T) {
 
 	// Test case: Error reading file
 	t.Run("ErrorReadingFile", func(t *testing.T) {
-		fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "empty.zip"))
-		if err != nil {
-			t.Fatalf("Failed to get absolute path to testdata/empty.zip: %v", err)
-		}
-
+		fixturePath := getFixturePath(t, "empty.zip")
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		testServer := createTestServer("http://example.com", "Test Server", 999, "test-key", "http://example.com", "test-api-value", "test-api-key", "1")
 
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: "http://example.com",
-			ObaApiKey:  "test-key",
-		}
-
-		err = metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
+		err := metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
 		if err == nil {
 			t.Fatal("Expected an error but got nil")
 		}
@@ -248,21 +160,11 @@ func TestCheckAgenciesWithCoverage(t *testing.T) {
 
 	// Test case: Error parsing GTFS data
 	t.Run("ErrorParsingGTFSData", func(t *testing.T) {
-		fixturePath, err := filepath.Abs(filepath.Join("..", "..", "testdata", "invalid_gtfs.zip"))
-		if err != nil {
-			t.Fatalf("Failed to get absolute path to testdata/invalid_gtfs.zip: %v", err)
-		}
-
+		fixturePath := getFixturePath(t, "invalid_gtfs.zip")
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+		testServer := createTestServer("http://example.com", "Test Server", 999, "test-key", "http://example.com", "test-api-value", "test-api-key", "1")
 
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: "http://example.com",
-			ObaApiKey:  "test-key",
-		}
-
-		err = metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
+		err := metrics.CheckAgenciesWithCoverageMatch(fixturePath, logger, testServer)
 		if err == nil {
 			t.Fatal("Expected an error but got nil")
 		}
@@ -271,67 +173,50 @@ func TestCheckAgenciesWithCoverage(t *testing.T) {
 }
 
 func TestCheckVehicleCountMatch(t *testing.T) {
-	// Test case 1: Success scenario, but not matching
 	t.Run("Success", func(t *testing.T) {
+		// Set up GTFS-RT server with the fixture data
 		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
 		defer gtfsRtServer.Close()
 
-		obaServer := setupObaServer(t, `{
-			"code": 200,
-			"currentTime": 1234567890000,
-			"text": "OK",
-			"version": 2,
-			"data": {
-				"list": [
-					{
-						"agencyId": "1"
-					}
-				]
-			}
-		}`, http.StatusOK)
+		// Set up OBA server with a successful response
+		obaServer := setupObaServer(t, `{"code":200,"currentTime":1234567890000,"text":"OK","version":2,"data":{"list":[{"agencyId":"1"}]}}`, http.StatusOK)
 		defer obaServer.Close()
 
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: obaServer.URL,
-			ObaApiKey:  "test-key",
-		}
+		// Create a test server instance with the GTFS-RT URL
+		testServer := createTestServer(obaServer.URL, "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
 
-		err := metrics.CheckVehicleCountMatch(gtfsRtServer.URL, "Authorization", "Bearer test-key", testServer)
+		// Call the function under test
+		err := metrics.CheckVehicleCountMatch(testServer)
 		if err != nil {
 			t.Fatalf("CheckVehicleCountMatch failed: %v", err)
 		}
 
+		// Parse the GTFS-RT fixture data to verify the number of vehicles
 		realtimeData, err := gtfs.ParseRealtime(readFixture(t, "gtfs_rt_feed_vehicles.pb"), &gtfs.ParseRealtimeOptions{})
 		if err != nil {
 			t.Fatalf("Failed to parse GTFS-RT fixture data: %v", err)
 		}
 
+		// Log the number of vehicles for debugging
 		t.Log("Number of vehicles in GTFS-RT feed:", len(realtimeData.Vehicles))
 	})
 
 	t.Run("GTFS-RT Error", func(t *testing.T) {
-		gtfsRtServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set up a GTFS-RT server that returns an error
+		gtfsRtServer := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer gtfsRtServer.Close()
 
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: "http://example.com",
-			ObaApiKey:  "test-key",
-		}
+		testServer := createTestServer("http://example.com", "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
 
-		err := metrics.CheckVehicleCountMatch(gtfsRtServer.URL, "Authorization", "Bearer test-key", testServer)
+		err := metrics.CheckVehicleCountMatch(testServer)
 		if err == nil {
 			t.Fatal("Expected an error but got nil")
 		}
 		t.Log("Received expected error:", err)
 	})
 
-	// Test case 3: OBA API server returns an error
 	t.Run("OBA API Error", func(t *testing.T) {
 		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
 		defer gtfsRtServer.Close()
@@ -339,14 +224,9 @@ func TestCheckVehicleCountMatch(t *testing.T) {
 		obaServer := setupObaServer(t, `{}`, http.StatusInternalServerError)
 		defer obaServer.Close()
 
-		testServer := models.ObaServer{
-			Name:       "Test Server",
-			ID:         999,
-			ObaBaseURL: obaServer.URL,
-			ObaApiKey:  "test-key",
-		}
+		testServer := createTestServer(obaServer.URL, "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
 
-		err := metrics.CheckVehicleCountMatch(gtfsRtServer.URL, "Authorization", "Bearer test-key", testServer)
+		err := metrics.CheckVehicleCountMatch(testServer)
 		if err == nil {
 			t.Fatal("Expected an error but got nil")
 		}

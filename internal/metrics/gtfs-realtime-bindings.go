@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	onebusaway "github.com/OneBusAway/go-sdk"
 	"github.com/OneBusAway/go-sdk/option"
@@ -13,8 +14,8 @@ import (
 	"watchdog.onebusaway.org/internal/models"
 )
 
-func CountVehiclePositions(gtfsRtURL string, apiKey string, apiValue string) (int, error) {
-	parsedURL, err := url.Parse(gtfsRtURL)
+func CountVehiclePositions(server models.ObaServer) (int, error) {
+	parsedURL, err := url.Parse(server.VehiclePositionUrl)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse GTFS-RT URL: %v", err)
 	}
@@ -24,7 +25,9 @@ func CountVehiclePositions(gtfsRtURL string, apiKey string, apiValue string) (in
 		return 0, fmt.Errorf("failed to create HTTP request: %v", err)
 	}
 
-	req.Header.Set(apiKey, apiValue)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Accept", "application/octet-stream")
+	req.Header.Set(server.GtfsRtApiKey, server.GtfsRtApiValue)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -45,7 +48,10 @@ func CountVehiclePositions(gtfsRtURL string, apiKey string, apiValue string) (in
 
 	count := len(realtimeData.Vehicles)
 
-	RealtimeVehiclePositions.WithLabelValues(gtfsRtURL).Set(float64(count))
+	RealtimeVehiclePositions.WithLabelValues(
+		server.VehiclePositionUrl,
+		strconv.Itoa(server.ID),
+	).Set(float64(count))
 
 	return count, nil
 }
@@ -59,21 +65,19 @@ func VehiclesForAgencyAPI(server models.ObaServer) (int, error) {
 
 	ctx := context.Background()
 
-	agencyID := "unitrans"
-
-	response, err := client.VehiclesForAgency.List(ctx, agencyID, onebusaway.VehiclesForAgencyListParams{})
+	response, err := client.VehiclesForAgency.List(ctx, server.AgencyID, onebusaway.VehiclesForAgencyListParams{})
 
 	if err != nil {
 		return 0, err
 	}
 
-	VehicleCountAPI.WithLabelValues(agencyID).Set(float64(len(response.Data.List)))
+	VehicleCountAPI.WithLabelValues(server.AgencyID, strconv.Itoa(server.ID)).Set(float64(len(response.Data.List)))
 
 	return len(response.Data.List), nil
 }
 
-func CheckVehicleCountMatch(vehiclePositionsURL, apiKey, apiValue string, server models.ObaServer) error {
-	gtfsRtVehicleCount, err := CountVehiclePositions(vehiclePositionsURL, apiKey, apiValue)
+func CheckVehicleCountMatch(server models.ObaServer) error {
+	gtfsRtVehicleCount, err := CountVehiclePositions(server)
 	if err != nil {
 		return fmt.Errorf("failed to count vehicle positions from GTFS-RT: %v", err)
 	}
@@ -88,7 +92,7 @@ func CheckVehicleCountMatch(vehiclePositionsURL, apiKey, apiValue string, server
 		match = 1
 	}
 
-	VehicleCountMatch.WithLabelValues(server.ObaBaseURL).Set(float64(match))
+	VehicleCountMatch.WithLabelValues(server.AgencyID, strconv.Itoa(server.ID)).Set(float64(match))
 
 	return nil
 }
