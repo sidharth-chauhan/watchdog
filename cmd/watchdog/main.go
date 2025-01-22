@@ -40,13 +40,14 @@ func main() {
 	flag.StringVar(&cfg.Env, "env", "development", "Environment (development|staging|production)")
 
 	var (
-		configFile     = flag.String("config-file", "", "Path to a local JSON configuration file")
-		configURL      = flag.String("config-url", "", "URL to a remote JSON configuration file")
-		configAuthUser = flag.String("config-auth-user", "", "Username for basic authentication (if using --config-url)")
-		configAuthPass = flag.String("config-auth-pass", "", "Password for basic authentication (if using --config-url)")
+		configFile = flag.String("config-file", "", "Path to a local JSON configuration file")
+		configURL  = flag.String("config-url", "", "URL to a remote JSON configuration file")
 	)
 
 	flag.Parse()
+
+	configAuthUser := os.Getenv("CONFIG_AUTH_USER")
+	configAuthPass := os.Getenv("CONFIG_AUTH_PASS")
 
 	if (*configFile != "" && *configURL != "") || (*configFile != "" && len(flag.Args()) > 0) || (*configURL != "" && len(flag.Args()) > 0) {
 		fmt.Println("Error: Only one of --config-file or --config-url can be specified.")
@@ -60,7 +61,7 @@ func main() {
 	if *configFile != "" {
 		servers, err = loadConfigFromFile(*configFile)
 	} else if *configURL != "" {
-		servers, err = loadConfigFromURL(*configURL, *configAuthUser, *configAuthPass)
+		servers, err = loadConfigFromURL(*configURL, configAuthUser, configAuthPass)
 	} else {
 		fmt.Println("Error: No configuration provided. Use --config-file or --config-url.")
 		flag.Usage()
@@ -81,7 +82,6 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	// For now use the first gtfs url
 	gtfsURL := servers[0].GtfsUrl
 	hash := sha1.Sum([]byte(gtfsURL))
 	hashStr := hex.EncodeToString(hash[:])
@@ -122,7 +122,7 @@ func main() {
 		go func() {
 			for {
 				time.Sleep(time.Minute)
-				newServers, err := loadConfigFromURL(*configURL, *configAuthUser, *configAuthPass)
+				newServers, err := loadConfigFromURL(*configURL, configAuthUser, configAuthPass)
 				if err != nil {
 					logger.Error("Failed to refresh remote config", "error", err)
 					continue

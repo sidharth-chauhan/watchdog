@@ -38,4 +38,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Run the application
 ENTRYPOINT ["/app/watchdog"]
-CMD ["--config-url", "http://example.com/config.json", "--config-auth-user", "admin", "--config-auth-pass", "password"]
