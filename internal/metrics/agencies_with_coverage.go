@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
 	onebusaway "github.com/OneBusAway/go-sdk"
 	"github.com/OneBusAway/go-sdk/option"
@@ -40,7 +41,7 @@ func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger, server mod
 	}
 
 	AgenciesInStaticGtfs.WithLabelValues(
-		server.ObaBaseURL,
+		strconv.Itoa(server.ID),
 	).Set(float64(len(staticData.Agencies)))
 
 	return len(staticData.Agencies), nil
@@ -61,7 +62,7 @@ func GetAgenciesWithCoverage(server models.ObaServer) (int, error) {
 	}
 
 	AgenciesInCoverageEndpoint.WithLabelValues(
-		server.ObaBaseURL,
+		strconv.Itoa(server.ID),
 	).Set(float64(len(response.Data.List)))
 
 	return len(response.Data.List), nil
@@ -80,7 +81,7 @@ func CheckAgenciesWithCoverageMatch(cachePath string, logger *slog.Logger, serve
 		matchValue = 1
 	}
 
-	AgenciesMatch.WithLabelValues(server.ObaBaseURL).Set(float64(matchValue))
+	AgenciesMatch.WithLabelValues(strconv.Itoa(server.ID)).Set(float64(matchValue))
 
 	return nil
 }
