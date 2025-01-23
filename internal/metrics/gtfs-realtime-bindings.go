@@ -25,8 +25,6 @@ func CountVehiclePositions(server models.ObaServer) (int, error) {
 		return 0, fmt.Errorf("failed to create HTTP request: %v", err)
 	}
 
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Accept", "application/octet-stream")
 	req.Header.Set(server.GtfsRtApiKey, server.GtfsRtApiValue)
 
 	client := &http.Client{}
