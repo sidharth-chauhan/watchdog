@@ -174,30 +174,25 @@ func TestCheckAgenciesWithCoverage(t *testing.T) {
 
 func TestCheckVehicleCountMatch(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		// Set up GTFS-RT server with the fixture data
 		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
+
 		defer gtfsRtServer.Close()
 
-		// Set up OBA server with a successful response
 		obaServer := setupObaServer(t, `{"code":200,"currentTime":1234567890000,"text":"OK","version":2,"data":{"list":[{"agencyId":"1"}]}}`, http.StatusOK)
 		defer obaServer.Close()
 
-		// Create a test server instance with the GTFS-RT URL
 		testServer := createTestServer(obaServer.URL, "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
 
-		// Call the function under test
 		err := metrics.CheckVehicleCountMatch(testServer)
 		if err != nil {
 			t.Fatalf("CheckVehicleCountMatch failed: %v", err)
 		}
 
-		// Parse the GTFS-RT fixture data to verify the number of vehicles
 		realtimeData, err := gtfs.ParseRealtime(readFixture(t, "gtfs_rt_feed_vehicles.pb"), &gtfs.ParseRealtimeOptions{})
 		if err != nil {
 			t.Fatalf("Failed to parse GTFS-RT fixture data: %v", err)
 		}
 
-		// Log the number of vehicles for debugging
 		t.Log("Number of vehicles in GTFS-RT feed:", len(realtimeData.Vehicles))
 	})
 
