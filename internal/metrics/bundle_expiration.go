@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/jamespfennell/gtfs"
+	"watchdog.onebusaway.org/internal/models"
 )
 
 // CheckBundleExpiration calculates the number of days remaining until the GTFS bundle expires.
-func CheckBundleExpiration(cachePath string, logger *slog.Logger, currentTime time.Time) (int, int, error) {
+func CheckBundleExpiration(cachePath string, logger *slog.Logger, currentTime time.Time, server models.ObaServer) (int, int, error) {
 
 	file, err := os.Open(cachePath)
 	if err != nil {
@@ -54,8 +56,8 @@ func CheckBundleExpiration(cachePath string, logger *slog.Logger, currentTime ti
 	daysUntilEarliestExpiration := int(earliestEndDate.Sub(currentTime).Hours() / 24)
 	daysUntilLatestExpiration := int(latestEndDate.Sub(currentTime).Hours() / 24)
 
-	BundleEarliestExpirationGauge.WithLabelValues("BundleExpiration").Set(float64(daysUntilEarliestExpiration))
-	BundleLatestExpirationGauge.WithLabelValues("BundleExpiration").Set(float64(daysUntilLatestExpiration))
+	BundleEarliestExpirationGauge.WithLabelValues(strconv.Itoa(server.ID)).Set(float64(daysUntilEarliestExpiration))
+	BundleLatestExpirationGauge.WithLabelValues(strconv.Itoa(server.ID)).Set(float64(daysUntilLatestExpiration))
 
 	return daysUntilEarliestExpiration, daysUntilLatestExpiration, nil
 }

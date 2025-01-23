@@ -82,12 +82,21 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	gtfsURL := servers[0].GtfsUrl
-	hash := sha1.Sum([]byte(gtfsURL))
-	hashStr := hex.EncodeToString(hash[:])
-
 	cacheDir := "cache"
-	cachePath := filepath.Join(cacheDir, hashStr+".zip")
+
+	// Download GTFS bundles for all servers on startup
+	for _, server := range servers {
+		hash := sha1.Sum([]byte(server.GtfsUrl))
+		hashStr := hex.EncodeToString(hash[:])
+		cachePath := filepath.Join(cacheDir, fmt.Sprintf("server_%d_%s.zip", server.ID, hashStr))
+
+		_, err := utils.DownloadGTFSBundle(server.GtfsUrl, cacheDir, server.ID, hashStr)
+		if err != nil {
+			logger.Error("Failed to download GTFS bundle", "server_id", server.ID, "error", err)
+		} else {
+			logger.Info("Successfully downloaded GTFS bundle", "server_id", server.ID, "path", cachePath)
+		}
+	}
 
 	app := &application{
 		config: cfg,
@@ -96,23 +105,21 @@ func main() {
 
 	app.startMetricsCollection()
 
-	// Download the GTFS bundle on startup
-	err = utils.DownloadGTFSBundle(gtfsURL, cachePath)
-	if err != nil {
-		logger.Error("Failed to download GTFS bundle", "error", err)
-	} else {
-		logger.Info("Successfully downloaded GTFS bundle", "path", cachePath)
-	}
-
-	// Cron job to download the GTFS bundle every 24 hours
+	// Cron job to download GTFS bundles for all servers every 24 hours
 	go func() {
 		for {
 			time.Sleep(24 * time.Hour)
-			err := utils.DownloadGTFSBundle(gtfsURL, cachePath)
-			if err != nil {
-				logger.Error("Failed to download GTFS bundle", "error", err)
-			} else {
-				logger.Info("Successfully updated GTFS bundle", "path", cachePath)
+			for _, server := range servers {
+				hash := sha1.Sum([]byte(server.GtfsUrl))
+				hashStr := hex.EncodeToString(hash[:])
+				cachePath := filepath.Join(cacheDir, fmt.Sprintf("server_%d_%s.zip", server.ID, hashStr))
+
+				_, err := utils.DownloadGTFSBundle(server.GtfsUrl, cacheDir, server.ID, hashStr)
+				if err != nil {
+					logger.Error("Failed to download GTFS bundle", "server_id", server.ID, "error", err)
+				} else {
+					logger.Info("Successfully updated GTFS bundle", "server_id", server.ID, "path", cachePath)
+				}
 			}
 		}
 	}()

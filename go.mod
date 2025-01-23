@@ -5,7 +5,6 @@ go 1.23.4
 require (
 	github.com/OneBusAway/go-sdk v0.1.0-alpha.10
 	github.com/jamespfennell/gtfs v0.1.24
-	github.com/joho/godotenv v1.5.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/client_model v0.6.1
