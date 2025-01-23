@@ -40,13 +40,14 @@ func main() {
 	flag.StringVar(&cfg.Env, "env", "development", "Environment (development|staging|production)")
 
 	var (
-		configFile     = flag.String("config-file", "", "Path to a local JSON configuration file")
-		configURL      = flag.String("config-url", "", "URL to a remote JSON configuration file")
-		configAuthUser = os.Getenv("CONFIG_AUTH_USER")
-		configAuthPass = os.Getenv("CONFIG_AUTH_PASS")
+		configFile = flag.String("config-file", "", "Path to a local JSON configuration file")
+		configURL  = flag.String("config-url", "", "URL to a remote JSON configuration file")
 	)
 
 	flag.Parse()
+
+	configAuthUser := os.Getenv("CONFIG_AUTH_USER")
+	configAuthPass := os.Getenv("CONFIG_AUTH_PASS")
 
 	if (*configFile != "" && *configURL != "") || (*configFile != "" && len(flag.Args()) > 0) || (*configURL != "" && len(flag.Args()) > 0) {
 		fmt.Println("Error: Only one of --config-file or --config-url can be specified.")
