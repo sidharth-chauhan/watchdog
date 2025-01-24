@@ -84,6 +84,13 @@ func main() {
 
 	cacheDir := "cache"
 
+	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(cacheDir, os.ModePerm); err != nil {
+			logger.Error("Failed to create cache directory", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	// Download GTFS bundles for all servers on startup
 	for _, server := range servers {
 		hash := sha1.Sum([]byte(server.GtfsUrl))
