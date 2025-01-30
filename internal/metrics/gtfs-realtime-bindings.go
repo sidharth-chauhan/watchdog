@@ -69,6 +69,10 @@ func VehiclesForAgencyAPI(server models.ObaServer) (int, error) {
 		return 0, err
 	}
 
+	if response == nil {
+		return 0, nil
+	}
+
 	VehicleCountAPI.WithLabelValues(server.AgencyID, strconv.Itoa(server.ID)).Set(float64(len(response.Data.List)))
 
 	return len(response.Data.List), nil

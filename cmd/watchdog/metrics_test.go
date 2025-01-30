@@ -12,6 +12,7 @@ import (
 
 	"github.com/jamespfennell/gtfs"
 	"watchdog.onebusaway.org/internal/metrics"
+	"watchdog.onebusaway.org/internal/models"
 )
 
 func TestMetricsEndpoint(t *testing.T) {
@@ -227,4 +228,131 @@ func TestCheckVehicleCountMatch(t *testing.T) {
 		}
 		t.Log("Received expected error:", err)
 	})
+}
+
+// OBASdk tests
+func TestGetAgenciesWithCoverage(t *testing.T) {
+    t.Run("NilResponse", func(t *testing.T) {
+        ts := setupObaServer(t, `{}`, http.StatusOK)
+        defer ts.Close()
+
+        server := models.ObaServer{
+            Name:       "Test Server",
+            ID:         999,
+            ObaBaseURL: ts.URL,
+            ObaApiKey:  "test-key",
+        }
+
+        count, err := metrics.GetAgenciesWithCoverage(server)
+        if err != nil {
+            t.Fatalf("Expected no error, got %v", err)
+        }
+
+        if count != 0 {
+            t.Fatalf("Expected count to be 0, got %d", count)
+        }
+    })
+
+    t.Run("SuccessfulResponse", func(t *testing.T) {
+        ts := setupObaServer(t, `{"data": {"list": [{"agencyId": "1"}, {"agencyId": "2"}]}}`, http.StatusOK)
+        defer ts.Close()
+
+        server := models.ObaServer{
+            Name:       "Test Server",
+            ID:         999,
+            ObaBaseURL: ts.URL,
+            ObaApiKey:  "test-key",
+        }
+
+        count, err := metrics.GetAgenciesWithCoverage(server)
+        if err != nil {
+            t.Fatalf("Expected no error, got %v", err)
+        }
+
+        if count != 2 {
+            t.Fatalf("Expected count to be 2, got %d", count)
+        }
+    })
+
+    t.Run("ErrorResponse", func(t *testing.T) {
+        ts := setupObaServer(t, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+        defer ts.Close()
+
+        server := models.ObaServer{
+            Name:       "Test Server",
+            ID:         999,
+            ObaBaseURL: ts.URL,
+            ObaApiKey:  "test-key",
+        }
+
+        _, err := metrics.GetAgenciesWithCoverage(server)
+        if err == nil {
+            t.Fatal("Expected an error but got nil")
+        }
+    })
+}
+
+
+func TestVehiclesForAgencyAPI(t *testing.T) {
+    t.Run("NilResponse", func(t *testing.T) {
+        ts := setupObaServer(t, `{"data": {"list": []}}`, http.StatusOK)
+        defer ts.Close()
+
+        server := models.ObaServer{
+            Name:       "Test Server",
+            ID:         999,
+            ObaBaseURL: ts.URL,
+            ObaApiKey:  "test-key",
+            AgencyID:   "test-agency",
+        }
+
+        count, err := metrics.VehiclesForAgencyAPI(server)
+        if err != nil {
+            t.Fatalf("Expected no error, got %v", err)
+        }
+
+        if count != 0 {
+            t.Fatalf("Expected count to be 0, got %d", count)
+        }
+    })
+
+    t.Run("SuccessfulResponse", func(t *testing.T) {
+        ts := setupObaServer(t, `{"data": {"list": [{"vehicleId": "1"}, {"vehicleId": "2"}]}}`, http.StatusOK)
+        defer ts.Close()
+
+        server := models.ObaServer{
+            Name:       "Test Server",
+            ID:         999,
+            ObaBaseURL: ts.URL,
+            ObaApiKey:  "test-key",
+            AgencyID:   "test-agency",
+        }
+
+        count, err := metrics.VehiclesForAgencyAPI(server)
+        if err != nil {
+            t.Fatalf("Expected no error, got %v", err)
+        }
+
+        if count != 2 {
+            t.Fatalf("Expected count to be 2, got %d", count)
+        }
+    })
+
+    t.Run("ErrorResponse", func(t *testing.T) {
+        ts := setupObaServer(t, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+        defer ts.Close()
+
+        server := models.ObaServer{
+            Name:       "Test Server",
+            ID:         999,
+            ObaBaseURL: ts.URL,
+            ObaApiKey:  "test-key",
+            AgencyID:   "test-agency",
+        }
+
+        _, err := metrics.VehiclesForAgencyAPI(server)
+        if err == nil {
+            t.Fatal("Expected an error but got nil")
+        }
+    })
 }
