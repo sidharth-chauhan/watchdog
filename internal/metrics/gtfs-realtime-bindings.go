@@ -24,8 +24,9 @@ func CountVehiclePositions(server models.ObaServer) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to create HTTP request: %v", err)
 	}
-
-	req.Header.Set(server.GtfsRtApiKey, server.GtfsRtApiValue)
+	if server.GtfsRtApiKey != "" && server.GtfsRtApiValue != "" {
+		req.Header.Set(server.GtfsRtApiKey, server.GtfsRtApiValue)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
