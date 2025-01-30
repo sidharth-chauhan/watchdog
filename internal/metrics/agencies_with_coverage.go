@@ -61,6 +61,10 @@ func GetAgenciesWithCoverage(server models.ObaServer) (int, error) {
 		return 0, err
 	}
 
+	if response == nil {
+		return 0, nil
+	}
+
 	AgenciesInCoverageEndpoint.WithLabelValues(
 		strconv.Itoa(server.ID),
 	).Set(float64(len(response.Data.List)))
