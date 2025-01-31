@@ -9,6 +9,7 @@ import (
 
 	onebusaway "github.com/OneBusAway/go-sdk"
 	"github.com/OneBusAway/go-sdk/option"
+	"github.com/getsentry/sentry-go"
 	"github.com/jamespfennell/gtfs"
 	"watchdog.onebusaway.org/internal/models"
 )
@@ -16,12 +17,14 @@ import (
 func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger, server models.ObaServer) (int, error) {
 	file, err := os.Open(cachePath)
 	if err != nil {
+		sentry.CaptureException(err)
 		return 0, err
 	}
 	defer file.Close()
 
 	fileInfo, err := file.Stat()
 	if err != nil {
+		sentry.CaptureException(err)
 		return 0, err
 	}
 
@@ -33,6 +36,7 @@ func CheckAgenciesWithCoverage(cachePath string, logger *slog.Logger, server mod
 
 	staticData, err := gtfs.ParseStatic(fileBytes, gtfs.ParseStaticOptions{})
 	if err != nil {
+		sentry.CaptureException(err)
 		return 0, err
 	}
 
@@ -58,6 +62,7 @@ func GetAgenciesWithCoverage(server models.ObaServer) (int, error) {
 	response, err := client.AgenciesWithCoverage.List(ctx)
 
 	if err != nil {
+		sentry.CaptureException(err)
 		return 0, err
 	}
 

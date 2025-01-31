@@ -10,6 +10,7 @@ import (
 
 	onebusaway "github.com/OneBusAway/go-sdk"
 	"github.com/OneBusAway/go-sdk/option"
+	"github.com/getsentry/sentry-go"
 	"github.com/jamespfennell/gtfs"
 	"watchdog.onebusaway.org/internal/models"
 )
@@ -31,6 +32,7 @@ func CountVehiclePositions(server models.ObaServer) (int, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		sentry.CaptureException(err)
 		return 0, fmt.Errorf("failed to fetch GTFS-RT feed: %v", err)
 	}
 	defer resp.Body.Close()
@@ -67,6 +69,7 @@ func VehiclesForAgencyAPI(server models.ObaServer) (int, error) {
 	response, err := client.VehiclesForAgency.List(ctx, server.AgencyID, onebusaway.VehiclesForAgencyListParams{})
 
 	if err != nil {
+		sentry.CaptureException(err)
 		return 0, err
 	}
 

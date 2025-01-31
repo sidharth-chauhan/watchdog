@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"watchdog.onebusaway.org/internal/models"
 	"watchdog.onebusaway.org/internal/server"
 	"watchdog.onebusaway.org/internal/utils"
@@ -81,6 +83,8 @@ func main() {
 	cfg.Servers = servers
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	setupSentry()
 
 	cacheDir := "cache"
 
@@ -163,6 +167,7 @@ func main() {
 
 	logger.Info("starting server", "addr", srv.Addr, "env", cfg.Env)
 	err = srv.ListenAndServe()
+	sentry.CaptureException(err)
 	logger.Error(err.Error())
 	os.Exit(1)
 }
@@ -213,4 +218,16 @@ func loadConfigFromURL(url, authUser, authPass string) ([]models.ObaServer, erro
 	}
 
 	return servers, nil
+}
+
+func setupSentry() {
+
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn:              os.Getenv("SENTRY_DSN"),
+		EnableTracing:    true,
+		Debug:            true,
+		TracesSampleRate: 1.0,
+	}); err != nil {
+		log.Fatalf("sentry.Init: %s", err)
+	}
 }

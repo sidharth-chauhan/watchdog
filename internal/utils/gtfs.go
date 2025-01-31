@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/getsentry/sentry-go"
 )
 
 func DownloadGTFSBundle(url string, cacheDir string, serverID int, hashStr string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
+		sentry.CaptureException(err)
 		return "", err
 	}
 	defer resp.Body.Close()
