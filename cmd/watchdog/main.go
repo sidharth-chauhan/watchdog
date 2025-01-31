@@ -230,4 +230,9 @@ func setupSentry() {
 	}); err != nil {
 		log.Fatalf("sentry.Init: %s", err)
 	}
+
+	defer sentry.Flush(2 * time.Second)
+
+	sentry.CaptureMessage("Watchdog started")
+
 }
