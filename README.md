@@ -36,6 +36,14 @@ The JSON configuration file should contain an array of `ObaServer` objects. Exam
 ]
 ```
 
+## Sentry Configuration
+
+To enable Sentry error tracking, set the `SENTRY_DSN` environment variable with your Sentry DSN.
+
+```sh
+export SENTRY_DSN="your_sentry_dsn"
+```
+
 # Running
 
 #### **Using a Local Configuration File**
