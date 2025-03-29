@@ -50,6 +50,26 @@ func TestGetLastCachedFile(t *testing.T) {
 	if err == nil {
 		t.Error("Expected an error for a server with no cached files, but got nil")
 	}
+	t.Run("Invalid Cache Directory Read", func(t *testing.T) {
+		invalidDir := "/invalid/cache/dir"
+		_, err := GetLastCachedFile(invalidDir, 1)
+		if err == nil {
+			t.Errorf("Expected error for os.ReadDir failure, got none")
+		}
+	})
+
+	t.Run("Empty Cache Directory", func(t *testing.T) {
+		emptyDir, err := os.MkdirTemp("", "emptycache")
+		if err != nil {
+			t.Fatalf("Failed to create empty temporary directory: %v", err)
+		}
+		defer os.RemoveAll(emptyDir)
+
+		_, err = GetLastCachedFile(emptyDir, 2)
+		if err == nil {
+			t.Errorf("Expected error for empty cache directory, but got none")
+		}
+	})
 }
 
 func createFileWithModTime(t *testing.T, path string, modTime time.Time) {
