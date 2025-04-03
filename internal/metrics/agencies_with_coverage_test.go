@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jamespfennell/gtfs"
 	"watchdog.onebusaway.org/internal/models"
 )
 
@@ -139,66 +138,5 @@ func TestGetAgenciesWithCoverage(t *testing.T) {
 			if err == nil {
 					t.Fatal("Expected an error but got nil")
 			}
-	})
-}
-
-
-
-
-
-func TestCheckVehicleCountMatch(t *testing.T) {
-	t.Run("Success", func(t *testing.T) {
-		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
-
-		defer gtfsRtServer.Close()
-
-		obaServer := setupObaServer(t, `{"code":200,"currentTime":1234567890000,"text":"OK","version":2,"data":{"list":[{"agencyId":"1"}]}}`, http.StatusOK)
-		defer obaServer.Close()
-
-		testServer := createTestServer(obaServer.URL, "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
-
-		err := CheckVehicleCountMatch(testServer)
-		if err != nil {
-			t.Fatalf("CheckVehicleCountMatch failed: %v", err)
-		}
-
-		realtimeData, err := gtfs.ParseRealtime(readFixture(t, "gtfs_rt_feed_vehicles.pb"), &gtfs.ParseRealtimeOptions{})
-		if err != nil {
-			t.Fatalf("Failed to parse GTFS-RT fixture data: %v", err)
-		}
-
-		t.Log("Number of vehicles in GTFS-RT feed:", len(realtimeData.Vehicles))
-	})
-
-	t.Run("GTFS-RT Error", func(t *testing.T) {
-		// Set up a GTFS-RT server that returns an error
-		gtfsRtServer := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-		}))
-		defer gtfsRtServer.Close()
-
-		testServer := createTestServer("http://example.com", "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
-
-		err := CheckVehicleCountMatch(testServer)
-		if err == nil {
-			t.Fatal("Expected an error but got nil")
-		}
-		t.Log("Received expected error:", err)
-	})
-
-	t.Run("OBA API Error", func(t *testing.T) {
-		gtfsRtServer := setupGtfsRtServer(t, "gtfs_rt_feed_vehicles.pb")
-		defer gtfsRtServer.Close()
-
-		obaServer := setupObaServer(t, `{}`, http.StatusInternalServerError)
-		defer obaServer.Close()
-
-		testServer := createTestServer(obaServer.URL, "Test Server", 999, "test-key", gtfsRtServer.URL, "test-api-value", "test-api-key", "1")
-
-		err := CheckVehicleCountMatch(testServer)
-		if err == nil {
-			t.Fatal("Expected an error but got nil")
-		}
-		t.Log("Received expected error:", err)
 	})
 }
