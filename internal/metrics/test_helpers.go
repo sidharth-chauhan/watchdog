@@ -38,7 +38,6 @@ func createTestServer(url, name string, id int, apiKey string, vehiclePositionUr
 	}
 }
 
-
 // getMetricValue is a helper function that retrieves the current value of a specific metric
 func getMetricValue(metric *prometheus.GaugeVec, labels map[string]string) (float64, error) {
 	// Create a collector for our specific metric

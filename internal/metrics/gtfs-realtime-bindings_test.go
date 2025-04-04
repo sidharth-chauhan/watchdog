@@ -56,65 +56,65 @@ func TestCountVehiclePositions(t *testing.T) {
 
 func TestVehiclesForAgencyAPI(t *testing.T) {
 	t.Run("NilResponse", func(t *testing.T) {
-			ts := setupObaServer(t, `{"data": {"list": []}}`, http.StatusOK)
-			defer ts.Close()
+		ts := setupObaServer(t, `{"data": {"list": []}}`, http.StatusOK)
+		defer ts.Close()
 
-			server := models.ObaServer{
-					Name:       "Test Server",
-					ID:         999,
-					ObaBaseURL: ts.URL,
-					ObaApiKey:  "test-key",
-					AgencyID:   "test-agency",
-			}
+		server := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: ts.URL,
+			ObaApiKey:  "test-key",
+			AgencyID:   "test-agency",
+		}
 
-			count, err := VehiclesForAgencyAPI(server)
-			if err != nil {
-					t.Fatalf("Expected no error, got %v", err)
-			}
+		count, err := VehiclesForAgencyAPI(server)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
 
-			if count != 0 {
-					t.Fatalf("Expected count to be 0, got %d", count)
-			}
+		if count != 0 {
+			t.Fatalf("Expected count to be 0, got %d", count)
+		}
 	})
 
 	t.Run("SuccessfulResponse", func(t *testing.T) {
-			ts := setupObaServer(t, `{"data": {"list": [{"vehicleId": "1"}, {"vehicleId": "2"}]}}`, http.StatusOK)
-			defer ts.Close()
+		ts := setupObaServer(t, `{"data": {"list": [{"vehicleId": "1"}, {"vehicleId": "2"}]}}`, http.StatusOK)
+		defer ts.Close()
 
-			server := models.ObaServer{
-					Name:       "Test Server",
-					ID:         999,
-					ObaBaseURL: ts.URL,
-					ObaApiKey:  "test-key",
-					AgencyID:   "test-agency",
-			}
+		server := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: ts.URL,
+			ObaApiKey:  "test-key",
+			AgencyID:   "test-agency",
+		}
 
-			count, err := VehiclesForAgencyAPI(server)
-			if err != nil {
-					t.Fatalf("Expected no error, got %v", err)
-			}
+		count, err := VehiclesForAgencyAPI(server)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
 
-			if count != 2 {
-					t.Fatalf("Expected count to be 2, got %d", count)
-			}
+		if count != 2 {
+			t.Fatalf("Expected count to be 2, got %d", count)
+		}
 	})
 
 	t.Run("ErrorResponse", func(t *testing.T) {
-			ts := setupObaServer(t, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
-			defer ts.Close()
+		ts := setupObaServer(t, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		defer ts.Close()
 
-			server := models.ObaServer{
-					Name:       "Test Server",
-					ID:         999,
-					ObaBaseURL: ts.URL,
-					ObaApiKey:  "test-key",
-					AgencyID:   "test-agency",
-			}
+		server := models.ObaServer{
+			Name:       "Test Server",
+			ID:         999,
+			ObaBaseURL: ts.URL,
+			ObaApiKey:  "test-key",
+			AgencyID:   "test-agency",
+		}
 
-			_, err := VehiclesForAgencyAPI(server)
-			if err == nil {
-					t.Fatal("Expected an error but got nil")
-			}
+		_, err := VehiclesForAgencyAPI(server)
+		if err == nil {
+			t.Fatal("Expected an error but got nil")
+		}
 	})
 }
 
