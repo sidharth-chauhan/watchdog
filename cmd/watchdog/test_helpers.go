@@ -11,7 +11,6 @@ import (
 	"watchdog.onebusaway.org/internal/models"
 )
 
-
 func newTestApplication(t *testing.T) *application {
 	t.Helper()
 
