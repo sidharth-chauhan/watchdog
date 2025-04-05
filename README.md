@@ -8,15 +8,6 @@ Golang-based Watchdog service for OBA REST API servers.
 
 - Go 1.23 or higher
 
-### Installing Go
-
-To install Go, run the following commands:
-
-```bash
-sudo apt update
-sudo apt install -y golang-go
-go version
-```
 
 ## Configuration
 
