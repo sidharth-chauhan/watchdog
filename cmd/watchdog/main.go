@@ -90,7 +90,7 @@ func main() {
 	setupSentry()
 
 	cacheDir := "cache"
-	if err = createCacheDirectory(cacheDir , logger) ; err != nil {
+	if err = createCacheDirectory(cacheDir, logger); err != nil {
 		logger.Error("Failed to create cache directory", "error", err)
 		os.Exit(1)
 	}
