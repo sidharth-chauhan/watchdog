@@ -192,10 +192,6 @@ kind delete cluster --name watchdog-kind
 
 This will clean up all resources and remove the cluster.
 
-## Additional Resources
-
-- [Kind Quick Start Guide](https://kind.sigs.k8s.io/docs/user/quick-start/)
-- [Kubernetes Documentation](https://kubernetes.io/docs/home/)
 
 # Testing
 
