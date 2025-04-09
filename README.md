@@ -110,9 +110,9 @@ This section provides instructions to deploy the `watchdog` application using Ku
 
 ## Prerequisites
 
-- [Docker](https://www.docker.com/) installed and running.
-- [Kind](https://kind.sigs.k8s.io/) installed for creating a local Kubernetes cluster.
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) installed for managing Kubernetes resources.
+- [Docker]:- installed and running.
+- [Kind]:- installed for creating a local Kubernetes cluster.
+- [kubectl]:-installed for managing Kubernetes resources.
 
 ## Steps to Deploy Watchdog
 
