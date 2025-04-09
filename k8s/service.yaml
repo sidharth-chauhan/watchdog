@@ -10,4 +10,4 @@ spec:
     targetPort: 8080
   selector:
     app: watchdog
-  type: ClusterIP # Change to "NodePort" or "LoadBalancer" for external access
+  type: NodePort # Change to "ClusterIP" or "LoadBalancer" for various use 
