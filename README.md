@@ -108,12 +108,6 @@ docker run -d \
 
 This section provides instructions to deploy the `watchdog` application using Kubernetes manifests.
 
-## Prerequisites
-
-- [Docker]:- installed and running.
-- [Kind]:- installed for creating a local Kubernetes cluster.
-- [kubectl]:-installed for managing Kubernetes resources.
-
 ## Steps to Deploy Watchdog
 
 ### 1. Create a Kind Cluster
