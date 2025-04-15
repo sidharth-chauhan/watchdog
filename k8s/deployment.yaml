@@ -2,10 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: watchdog
+  namespace: watchdog-ns
   labels:
     app: watchdog
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: watchdog
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
       - name: watchdog
-        image: sid091/my-images:latest  
+        image: sidharthchauhan/watchdog:v1
         ports:
         - containerPort: 8080
         volumeMounts:
