@@ -1,54 +1,45 @@
-# syntax=docker/dockerfile:1.5
+# Build stage
+FROM golang:1.23-alpine AS builder
 
-# Comments are provided throughout this file to help you get started.
-################################################################################
-# Create a stage for building the application.
-ARG GO_VERSION=1.23.5
-FROM golang:${GO_VERSION}-bookworm AS build
-WORKDIR /src
+WORKDIR /usr/src/app
 
-# the container.
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,source=go.sum,target=go.sum \
-    --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
+# Install git for go mod download
+RUN apk add --no-cache git
 
-# Build the application.
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,target=. \
-    CGO_ENABLED=0 go build -o /bin/server ./cmd/watchdog
+# Pre-copy go.mod and go.sum for better caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 
-################################################################################
-# Create a new stage for running the application that contains the minimal
+# Copy source code
+COPY . .
 
-FROM alpine:latest AS final
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o watchdog ./cmd/watchdog
 
-# Install any runtime dependencies that are needed to run your application.
-# Leverage a cache mount to /var/cache/apk/ to speed up subsequent builds.
-RUN --mount=type=cache,target=/var/cache/apk \
-    apk --update add \
-        ca-certificates \
-        tzdata \
-        && \
-        update-ca-certificates
+# Final stage
+FROM alpine:3.19
 
-# Create a non-privileged user that the app will run under.
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    appuser
-USER appuser
+# Install only necessary packages
+RUN apk add --no-cache ca-certificates tzdata
 
-# Copy the executable from the "build" stage.
-COPY --from=build /bin/server /bin/
+# Create non-root user
+RUN addgroup -S watchdog && adduser -S watchdog -G watchdog
 
-# Expose the port that the application listens on.
-EXPOSE 4000
+WORKDIR /app
 
-# What the container should run when it is started.
-ENTRYPOINT [ "/bin/server" ]
+# Copy binary from builder
+COPY --from=builder /usr/src/app/watchdog .
+RUN chown -R watchdog:watchdog /app
+
+# Use non-root user
+USER watchdog
+
+# Expose port
+EXPOSE 8080
+
+# Set healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/v1/healthcheck || exit 1
+
+# Run the application
+ENTRYPOINT ["/app/watchdog"]
