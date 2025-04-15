@@ -100,26 +100,31 @@ docker run -d \
 
 ### Quick Start
 ```bash
-# Build and deploy
+#Build and deploy#
+```bash
 cd k8s/build && ./build.sh
-
-# Run Kubernetes tests
+```
+# Run Kubernetes tests#
+```bash
 cd k8s/tests && go test -v
-
-# Check if application is running
+```
+# Check if application is running#
+```bash
 kubectl get pods -n watchdog-ns
 kubectl get services -n watchdog-ns
-
-# Access API
+```
+# Access API#
+```bash
 curl http://192.168.49.2:30996/v1/healthcheck
 ```
 
 ### Testing
-```bash
 # Run all Go tests
+```bash
 go test ./...
-
+```
 # Run Kubernetes tests
+```bash
 cd k8s/tests && go test -v
 ```
 
