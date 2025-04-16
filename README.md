@@ -99,7 +99,7 @@ docker run -d \
 ## **Running with Kubernetes**
 
 ### Quick Start
-```bash
+
 #Build and deploy#
 ```bash
 cd k8s/build && ./build.sh
