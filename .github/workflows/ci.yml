@@ -64,10 +64,6 @@ jobs:
       
     - name: Apply Service
       run: kubectl apply -f k8s/service.yaml -n watchdog-ns
-      
-    - name: Wait for Deployment
-      run: |
-        kubectl wait --for=condition=ready pod -l app=watchdog -n watchdog-ns --timeout=300s
         
     - name: Run K8s tests
       run: |
