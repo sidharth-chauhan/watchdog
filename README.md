@@ -115,11 +115,6 @@ cd k8s/tests && go test -v
 kubectl get pods -n watchdog-ns
 kubectl get services -n watchdog-ns
 ```
-# Access API #
-```bash
-curl http://192.168.49.2:30996/v1/healthcheck
-```
-
 # Testing #
 ## Run all Go tests
 ```bash
