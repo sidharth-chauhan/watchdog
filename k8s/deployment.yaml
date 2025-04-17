@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: watchdog
-        image: sidharthchauhan/watchdog:v1
+        image: ${DOCKER_IMAGE_NAME}:latest
         ports:
         - containerPort: 8080
         volumeMounts:
