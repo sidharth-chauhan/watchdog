@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: watchdog
-        image: ${DOCKER_IMAGE_NAME}:latest
+        image: opentransitsoftwarefoundation/watchdog:latest
         ports:
         - containerPort: 8080
         volumeMounts:
