@@ -98,12 +98,13 @@ docker run -d \
 
 ## **Running with Kubernetes**
 
-### Quick Start
-
-#Build and deploy#
+### Build and deploy
 ```bash
 cd k8s/build && ./build.sh
 ```
+<img src="https://github.com/user-attachments/assets/916f33ae-6aca-4f39-8f82-97e20138d35c" alt="build" width="500"/>
+
+
 # Run Kubernetes tests#
 ```bash
 cd k8s/tests && go test -v
