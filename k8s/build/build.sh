@@ -24,7 +24,7 @@ check_docker
 
 # Pull Docker image from Docker Hub
 echo -e "${GREEN}📥 Pulling Docker image from Docker Hub...${NC}"
-docker pull sidharthchauhan/watchdog:v1
+docker pull opentransitsoftwarefoundation/watchdog:latest
 
 # Start minikube if not running
 if ! minikube status &> /dev/null; then
