@@ -2,7 +2,7 @@ name: Run Tests
 
 on:
   push:
-    branches: [feature/k8s-setup]
+    branches: [main]
   pull_request:
 
 jobs:
