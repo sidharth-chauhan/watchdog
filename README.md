@@ -106,11 +106,11 @@ cd k8s/build && ./build.sh
 <img src="https://github.com/user-attachments/assets/916f33ae-6aca-4f39-8f82-97e20138d35c" alt="build" width="500"/>
 
 
-# Run Kubernetes tests #
+### Run Kubernetes tests 
 ```bash
 cd k8s/tests && go test -v
 ```
-# Check if application is running #
+### Check if application is running 
 ```bash
 kubectl get pods -n watchdog-ns
 kubectl get services -n watchdog-ns
@@ -120,12 +120,12 @@ kubectl get services -n watchdog-ns
 curl http://192.168.49.2:30996/v1/healthcheck
 ```
 
-### Testing
-# Run all Go tests
+# Testing #
+## Run all Go tests
 ```bash
 go test ./...
 ```
-# Run Kubernetes tests
+## Run Kubernetes tests 
 ```bash
 cd k8s/tests && go test -v
 ```
