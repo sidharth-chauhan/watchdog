@@ -20,6 +20,4 @@ data:
         "agency_id": "test-agency"
       }
     ]
-  # Docker image configuration
-  image.name: "sidharthchauhan/watchdog"
-  image.tag: "v1"
+ 
